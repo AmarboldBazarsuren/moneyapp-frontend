@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
-import { authService } from '../../services/authService';
+import authService from '../../services/authService';  // ✅ ЗАСВАРЛАСАН - {} хаалт авлаа
 
 const ProfileEditScreen = () => {
   const router = useRouter();
@@ -477,7 +477,7 @@ const ProfileEditScreen = () => {
                 onPress={handleSave}
                 loading={loading}
                 fullWidth
-                variant="gradient"
+                variant="primary"
               />
 
               <Button

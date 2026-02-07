@@ -14,10 +14,8 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to login if not authenticated
       router.replace('/login');
     } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to home if authenticated
       router.replace('/(tabs)/home');
     }
   }, [isAuthenticated, isLoading, segments]);
@@ -74,6 +72,14 @@ function RootLayoutNav() {
         />
         <Stack.Screen 
           name="transaction-detail/[id]" 
+          options={{
+            presentation: 'card',
+            headerShown: false,
+          }}
+        />
+        {/* ✅ ЗАСВАРЛАСАН - profile-edit/index гэж заана */}
+        <Stack.Screen 
+          name="profile-edit" 
           options={{
             presentation: 'card',
             headerShown: false,
