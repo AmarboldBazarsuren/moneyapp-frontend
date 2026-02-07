@@ -80,7 +80,10 @@ const HomeScreen = () => {
                 <Text style={styles.hello}>Сайн байна уу</Text>
                 <Text style={styles.name}>{user?.firstName} 🎉</Text>
               </View>
-              <TouchableOpacity style={styles.avatar}>
+              <TouchableOpacity 
+                style={styles.avatar}
+                onPress={() => router.push('/(tabs)/profile')}
+              >
                 <LinearGradient
                   colors={['#FF6B9D', '#C44569']}
                   style={styles.avatarGrad}>
@@ -153,7 +156,7 @@ const HomeScreen = () => {
               </LinearGradient>
             </TouchableOpacity>
 
-            {/* ⚡ QUICK ACTIONS - Modern Pills */}
+            {/* ⚡ QUICK ACTIONS - ЗАСВАРЛАСАН */}
             <View style={styles.actions}>
               <TouchableOpacity
                 style={styles.actionPill}
@@ -182,14 +185,15 @@ const HomeScreen = () => {
                 </LinearGradient>
               </TouchableOpacity>
 
+              {/* 🆕 ШИНЭ: Мөнгө татах товч */}
               <TouchableOpacity
                 style={styles.actionPill}
-                onPress={() => router.push('/(tabs)/profile')}>
+                onPress={() => router.push('/withdraw')}>
                 <LinearGradient
-                  colors={['#BB6BD9', '#9B59B6']}
+                  colors={['#6BCF7F', '#4CAF50']}
                   style={styles.actionGrad}>
-                  <Text style={styles.actionIcon}>🚀</Text>
-                  <Text style={styles.actionText}>Профайл</Text>
+                  <Text style={styles.actionIcon}>💸</Text>
+                  <Text style={styles.actionText}>Мөнгө татах</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>

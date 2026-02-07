@@ -11,12 +11,9 @@ import {
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { authService } from '../../services/authService';
-import { COLORS, GRADIENTS, SHADOWS, RADIUS, SPACING } from '../../styles/colors';
-import { TEXT_STYLES } from '../../styles/typography';
 
 const ProfileEditScreen = () => {
   const router = useRouter();
@@ -181,310 +178,332 @@ const ProfileEditScreen = () => {
   const isProfileLocked = user?.profileLockedAt;
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backButton}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Мэдээлэл засах</Text>
-        <View style={{ width: 32 }} />
-      </View>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#F5F7FA', '#ECF0F3']}
+        style={StyleSheet.absoluteFill}
+      />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        
-        {/* LOCKED INDICATOR */}
-        {isProfileLocked && (
-          <Card variant="outline" padding="medium" style={styles.lockedCard}>
-            <View style={styles.lockedContent}>
-              <Text style={styles.lockedIcon}>🔒</Text>
-              <View style={styles.lockedTextContainer}>
-                <Text style={styles.lockedTitle}>Профайл хаагдсан</Text>
-                <Text style={styles.lockedText}>
-                  Зөвхөн админ засах боломжтой. Холбоо барих: 7777-7777
+      <SafeAreaView style={styles.safe}>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backText}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Мэдээлэл засах</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}>
+          
+          {/* LOCKED INDICATOR */}
+          {isProfileLocked && (
+            <View style={styles.lockedCard}>
+              <View style={styles.lockedContent}>
+                <Text style={styles.lockedIcon}>🔒</Text>
+                <View style={styles.lockedTextContainer}>
+                  <Text style={styles.lockedTitle}>Профайл хаагдсан</Text>
+                  <Text style={styles.lockedText}>
+                    Зөвхөн админ засах боломжтой. Холбоо барих: 7777-7777
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* ҮНДСЭН МЭДЭЭЛЭЛ */}
+          <View style={styles.card}>
+            <LinearGradient
+              colors={['#FF6B9D', '#C44569']}
+              style={styles.cardGrad}>
+              <Text style={styles.sectionTitleWhite}>Үндсэн мэдээлэл (Засах боломжгүй)</Text>
+              
+              <View style={styles.lockedField}>
+                <Text style={styles.lockedFieldLabel}>Овог</Text>
+                <Text style={styles.lockedFieldValue}>{user?.lastName}</Text>
+              </View>
+
+              <View style={styles.lockedField}>
+                <Text style={styles.lockedFieldLabel}>Нэр</Text>
+                <Text style={styles.lockedFieldValue}>{user?.firstName}</Text>
+              </View>
+
+              <View style={styles.lockedField}>
+                <Text style={styles.lockedFieldLabel}>Регистр</Text>
+                <Text style={styles.lockedFieldValue}>{user?.registerNumber}</Text>
+              </View>
+
+              <View style={styles.lockedField}>
+                <Text style={styles.lockedFieldLabel}>Утас</Text>
+                <Text style={styles.lockedFieldValue}>{user?.phoneNumber}</Text>
+              </View>
+            </LinearGradient>
+          </View>
+
+          {/* ДАНСНЫ МЭДЭЭЛЭЛ */}
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
+              <Text style={styles.sectionTitle}>💳 Дансны мэдээлэл</Text>
+              
+              <Text style={styles.label}>Дансны дугаар *</Text>
+              <TextInput
+                style={[styles.input, isProfileLocked && styles.inputDisabled]}
+                placeholder="8-16 орон"
+                placeholderTextColor="#94A3B8"
+                value={formData.bankAccountNumber}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, bankAccountNumber: text })
+                }
+                keyboardType="numeric"
+                maxLength={25}
+                editable={!isProfileLocked}
+              />
+              
+              <View style={styles.infoBox}>
+                <Text style={styles.infoIcon}>ℹ️</Text>
+                <Text style={styles.infoText}>
+                  Та iban дугаарын хамт оруулна уу.
                 </Text>
               </View>
             </View>
-          </Card>
-        )}
-
-        {/* ҮНДСЭН МЭДЭЭЛЭЛ */}
-        <Card variant="gradient" gradientColors={GRADIENTS.primary} padding="medium">
-          <Text style={styles.sectionTitleWhite}>Үндсэн мэдээлэл (Засах боломжгүй)</Text>
-          
-          <View style={styles.lockedField}>
-            <Text style={styles.lockedFieldLabel}>Овог</Text>
-            <Text style={styles.lockedFieldValue}>{user?.lastName}</Text>
           </View>
 
-          <View style={styles.lockedField}>
-            <Text style={styles.lockedFieldLabel}>Нэр</Text>
-            <Text style={styles.lockedFieldValue}>{user?.firstName}</Text>
-          </View>
-
-          <View style={styles.lockedField}>
-            <Text style={styles.lockedFieldLabel}>Регистр</Text>
-            <Text style={styles.lockedFieldValue}>{user?.registerNumber}</Text>
-          </View>
-
-          <View style={styles.lockedField}>
-            <Text style={styles.lockedFieldLabel}>Утас</Text>
-            <Text style={styles.lockedFieldValue}>{user?.phoneNumber}</Text>
-          </View>
-        </Card>
-
-        {/* ДАНСНЫ МЭДЭЭЛЭЛ */}
-        <Card padding="medium">
-          <Text style={styles.sectionTitle}>💳 Дансны мэдээлэл</Text>
-          
-          <Text style={styles.label}>Дансны дугаар *</Text>
-          <TextInput
-            style={[styles.input, isProfileLocked && styles.inputDisabled]}
-            placeholder="8-16 орон"
-            placeholderTextColor={COLORS.textTertiary}
-            value={formData.bankAccountNumber}
-            onChangeText={(text) =>
-              setFormData({ ...formData, bankAccountNumber: text })
-            }
-            keyboardType="numeric"
-            maxLength={16}
-            editable={!isProfileLocked}
-          />
-          
-          <Card variant="outline" padding="small" style={styles.infoBox}>
-            <Text style={styles.infoIcon}>ℹ️</Text>
-            <Text style={styles.infoText}>
-              Админ дансны дугаар өөрчлөх боломжтой
-            </Text>
-          </Card>
-        </Card>
-
-        {/* ЯАРАЛТАЙ ХОЛБОО */}
-        <Card padding="medium">
-          <Text style={styles.sectionTitle}>🚨 Яаралтай холбоо барих</Text>
-          
-          <Text style={styles.label}>Нэр *</Text>
-          <TextInput
-            style={[styles.input, isProfileLocked && styles.inputDisabled]}
-            placeholder="Бүрэн нэр"
-            placeholderTextColor={COLORS.textTertiary}
-            value={formData.emergencyContact.name}
-            onChangeText={(text) =>
-              setFormData({
-                ...formData,
-                emergencyContact: { ...formData.emergencyContact, name: text },
-              })
-            }
-            editable={!isProfileLocked}
-          />
-
-          <Text style={styles.label}>Утасны дугаар *</Text>
-          <TextInput
-            style={[styles.input, isProfileLocked && styles.inputDisabled]}
-            placeholder="8 орон"
-            placeholderTextColor={COLORS.textTertiary}
-            value={formData.emergencyContact.phoneNumber}
-            onChangeText={(text) =>
-              setFormData({
-                ...formData,
-                emergencyContact: {
-                  ...formData.emergencyContact,
-                  phoneNumber: text.replace(/[^0-9]/g, ''),
-                },
-              })
-            }
-            keyboardType="phone-pad"
-            maxLength={8}
-            editable={!isProfileLocked}
-          />
-
-          <Text style={styles.label}>Хамаарал</Text>
-          <TextInput
-            style={[styles.input, isProfileLocked && styles.inputDisabled]}
-            placeholder="Жишээ: Эхнэр, Эцэг, Ах/Эгч"
-            placeholderTextColor={COLORS.textTertiary}
-            value={formData.emergencyContact.relationship}
-            onChangeText={(text) =>
-              setFormData({
-                ...formData,
-                emergencyContact: {
-                  ...formData.emergencyContact,
-                  relationship: text,
-                },
-              })
-            }
-            editable={!isProfileLocked}
-          />
-        </Card>
-
-        {/* БОЛОВСРОЛ */}
-        <Card padding="medium">
-          <Text style={styles.sectionTitle}>🎓 Боловсролын түвшин *</Text>
-          
-          <View style={styles.educationGrid}>
-            {educationLevels.map((level) => (
-              <TouchableOpacity
-                key={level.value}
-                style={[
-                  styles.educationButton,
-                  formData.educationLevel === level.value &&
-                    styles.educationButtonActive,
-                  isProfileLocked && styles.educationButtonDisabled,
-                ]}
-                onPress={() =>
-                  !isProfileLocked &&
-                  setFormData({ ...formData, educationLevel: level.value })
+          {/* ЯАРАЛТАЙ ХОЛБОО */}
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
+              <Text style={styles.sectionTitle}>🚨 Яаралтай холбоо барих</Text>
+              
+              <Text style={styles.label}>Нэр *</Text>
+              <TextInput
+                style={[styles.input, isProfileLocked && styles.inputDisabled]}
+                placeholder="Бүрэн нэр"
+                placeholderTextColor="#94A3B8"
+                value={formData.emergencyContact.name}
+                onChangeText={(text) =>
+                  setFormData({
+                    ...formData,
+                    emergencyContact: { ...formData.emergencyContact, name: text },
+                  })
                 }
-                disabled={isProfileLocked}>
-                <Text
-                  style={[
-                    styles.educationButtonText,
-                    formData.educationLevel === level.value &&
-                      styles.educationButtonTextActive,
-                  ]}>
-                  {level.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                editable={!isProfileLocked}
+              />
+
+              <Text style={styles.label}>Утасны дугаар *</Text>
+              <TextInput
+                style={[styles.input, isProfileLocked && styles.inputDisabled]}
+                placeholder="8 орон"
+                placeholderTextColor="#94A3B8"
+                value={formData.emergencyContact.phoneNumber}
+                onChangeText={(text) =>
+                  setFormData({
+                    ...formData,
+                    emergencyContact: {
+                      ...formData.emergencyContact,
+                      phoneNumber: text.replace(/[^0-9]/g, ''),
+                    },
+                  })
+                }
+                keyboardType="phone-pad"
+                maxLength={8}
+                editable={!isProfileLocked}
+              />
+
+              <Text style={styles.label}>Хамаарал</Text>
+              <TextInput
+                style={[styles.input, isProfileLocked && styles.inputDisabled]}
+                placeholder="Жишээ: Эхнэр, Эцэг, Ах/Эгч"
+                placeholderTextColor="#94A3B8"
+                value={formData.emergencyContact.relationship}
+                onChangeText={(text) =>
+                  setFormData({
+                    ...formData,
+                    emergencyContact: {
+                      ...formData.emergencyContact,
+                      relationship: text,
+                    },
+                  })
+                }
+                editable={!isProfileLocked}
+              />
+            </View>
           </View>
-        </Card>
 
-        {/* АЖИЛ, ОРЛОГО */}
-        <Card padding="medium">
-          <Text style={styles.sectionTitle}>💼 Ажил, орлого</Text>
-          
-          <Text style={styles.label}>Ажил мэргэжил *</Text>
-          <TextInput
-            style={[styles.input, isProfileLocked && styles.inputDisabled]}
-            placeholder="Жишээ: Инженер, Багш"
-            placeholderTextColor={COLORS.textTertiary}
-            value={formData.occupation}
-            onChangeText={(text) =>
-              setFormData({ ...formData, occupation: text })
-            }
-            editable={!isProfileLocked}
-          />
-
-          <Text style={styles.label}>Сарын орлого *</Text>
-          <TextInput
-            style={[styles.input, isProfileLocked && styles.inputDisabled]}
-            placeholder="Жишээ: 1,000,000₮ - 2,000,000₮"
-            placeholderTextColor={COLORS.textTertiary}
-            value={formData.monthlyIncome}
-            onChangeText={(text) =>
-              setFormData({ ...formData, monthlyIncome: text })
-            }
-            editable={!isProfileLocked}
-          />
-        </Card>
-
-        {/* ХАЯГ */}
-        <Card padding="medium">
-          <Text style={styles.sectionTitle}>🏠 Хаяг мэдээлэл</Text>
-          
-          <Text style={styles.label}>Хот/Аймаг *</Text>
-          <TextInput
-            style={[styles.input, isProfileLocked && styles.inputDisabled]}
-            placeholder="Жишээ: Улаанбаатар"
-            placeholderTextColor={COLORS.textTertiary}
-            value={formData.address.city}
-            onChangeText={(text) =>
-              setFormData({
-                ...formData,
-                address: { ...formData.address, city: text },
-              })
-            }
-            editable={!isProfileLocked}
-          />
-
-          <Text style={styles.label}>Дүүрэг/Сум *</Text>
-          <TextInput
-            style={[styles.input, isProfileLocked && styles.inputDisabled]}
-            placeholder="Жишээ: Сүхбаатар"
-            placeholderTextColor={COLORS.textTertiary}
-            value={formData.address.district}
-            onChangeText={(text) =>
-              setFormData({
-                ...formData,
-                address: { ...formData.address, district: text },
-              })
-            }
-            editable={!isProfileLocked}
-          />
-
-          <Text style={styles.label}>Гудамж/Хороолол</Text>
-          <TextInput
-            style={[styles.input, isProfileLocked && styles.inputDisabled]}
-            placeholder="Жишээ: 1-р хороо"
-            placeholderTextColor={COLORS.textTertiary}
-            value={formData.address.street}
-            onChangeText={(text) =>
-              setFormData({
-                ...formData,
-                address: { ...formData.address, street: text },
-              })
-            }
-            editable={!isProfileLocked}
-          />
-
-          <Text style={styles.label}>Дэлгэрэнгүй хаяг</Text>
-          <TextInput
-            style={[
-              styles.input,
-              styles.textArea,
-              isProfileLocked && styles.inputDisabled,
-            ]}
-            placeholder="Байр, тоот гэх мэт"
-            placeholderTextColor={COLORS.textTertiary}
-            value={formData.address.details}
-            onChangeText={(text) =>
-              setFormData({
-                ...formData,
-                address: { ...formData.address, details: text },
-              })
-            }
-            multiline
-            numberOfLines={3}
-            editable={!isProfileLocked}
-          />
-        </Card>
-
-        {/* ACTION BUTTONS */}
-        {!isProfileLocked && (
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Хадгалах"
-              variant="gradient"
-              onPress={handleSave}
-              loading={loading}
-              fullWidth
-            />
-
-            <Button
-              title="Профайл хаах"
-              variant="outline"
-              onPress={handleLockProfile}
-              loading={lockLoading}
-              fullWidth
-              style={styles.lockButton}
-            />
+          {/* БОЛОВСРОЛ */}
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
+              <Text style={styles.sectionTitle}>🎓 Боловсролын түвшин *</Text>
+              
+              <View style={styles.educationGrid}>
+                {educationLevels.map((level) => (
+                  <TouchableOpacity
+                    key={level.value}
+                    style={[
+                      styles.educationButton,
+                      formData.educationLevel === level.value &&
+                        styles.educationButtonActive,
+                      isProfileLocked && styles.educationButtonDisabled,
+                    ]}
+                    onPress={() =>
+                      !isProfileLocked &&
+                      setFormData({ ...formData, educationLevel: level.value })
+                    }
+                    disabled={isProfileLocked}>
+                    <Text
+                      style={[
+                        styles.educationButtonText,
+                        formData.educationLevel === level.value &&
+                          styles.educationButtonTextActive,
+                      ]}>
+                      {level.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           </View>
-        )}
 
-        {/* Bottom spacing */}
-        <View style={{ height: SPACING.xl }} />
-      </ScrollView>
-    </SafeAreaView>
+          {/* АЖИЛ, ОРЛОГО */}
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
+              <Text style={styles.sectionTitle}>💼 Ажил, орлого</Text>
+              
+              <Text style={styles.label}>Ажил мэргэжил *</Text>
+              <TextInput
+                style={[styles.input, isProfileLocked && styles.inputDisabled]}
+                placeholder="Жишээ: Инженер, Багш"
+                placeholderTextColor="#94A3B8"
+                value={formData.occupation}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, occupation: text })
+                }
+                editable={!isProfileLocked}
+              />
+
+              <Text style={styles.label}>Сарын орлого *</Text>
+              <TextInput
+                style={[styles.input, isProfileLocked && styles.inputDisabled]}
+                placeholder="Жишээ: 1,000,000₮ - 2,000,000₮"
+                placeholderTextColor="#94A3B8"
+                value={formData.monthlyIncome}
+                onChangeText={(text) =>
+                  setFormData({ ...formData, monthlyIncome: text })
+                }
+                editable={!isProfileLocked}
+              />
+            </View>
+          </View>
+
+          {/* ХАЯГ */}
+          <View style={styles.card}>
+            <View style={styles.cardContent}>
+              <Text style={styles.sectionTitle}>🏠 Хаяг мэдээлэл</Text>
+              
+              <Text style={styles.label}>Хот/Аймаг *</Text>
+              <TextInput
+                style={[styles.input, isProfileLocked && styles.inputDisabled]}
+                placeholder="Жишээ: Улаанбаатар"
+                placeholderTextColor="#94A3B8"
+                value={formData.address.city}
+                onChangeText={(text) =>
+                  setFormData({
+                    ...formData,
+                    address: { ...formData.address, city: text },
+                  })
+                }
+                editable={!isProfileLocked}
+              />
+
+              <Text style={styles.label}>Дүүрэг/Сум *</Text>
+              <TextInput
+                style={[styles.input, isProfileLocked && styles.inputDisabled]}
+                placeholder="Жишээ: Сүхбаатар"
+                placeholderTextColor="#94A3B8"
+                value={formData.address.district}
+                onChangeText={(text) =>
+                  setFormData({
+                    ...formData,
+                    address: { ...formData.address, district: text },
+                  })
+                }
+                editable={!isProfileLocked}
+              />
+
+              <Text style={styles.label}>Гудамж/Хороолол</Text>
+              <TextInput
+                style={[styles.input, isProfileLocked && styles.inputDisabled]}
+                placeholder="Жишээ: 1-р хороо"
+                placeholderTextColor="#94A3B8"
+                value={formData.address.street}
+                onChangeText={(text) =>
+                  setFormData({
+                    ...formData,
+                    address: { ...formData.address, street: text },
+                  })
+                }
+                editable={!isProfileLocked}
+              />
+
+              <Text style={styles.label}>Дэлгэрэнгүй хаяг</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  styles.textArea,
+                  isProfileLocked && styles.inputDisabled,
+                ]}
+                placeholder="Байр, тоот гэх мэт"
+                placeholderTextColor="#94A3B8"
+                value={formData.address.details}
+                onChangeText={(text) =>
+                  setFormData({
+                    ...formData,
+                    address: { ...formData.address, details: text },
+                  })
+                }
+                multiline
+                numberOfLines={3}
+                editable={!isProfileLocked}
+              />
+            </View>
+          </View>
+
+          {/* ACTION BUTTONS */}
+          {!isProfileLocked && (
+            <View style={styles.buttonContainer}>
+              <Button
+                title="Хадгалах"
+                onPress={handleSave}
+                loading={loading}
+                fullWidth
+                variant="gradient"
+              />
+
+              <Button
+                title="Профайл хаах"
+                onPress={handleLockProfile}
+                loading={lockLoading}
+                fullWidth
+                variant="outline"
+                style={styles.lockButton}
+              />
+            </View>
+          )}
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+  },
+  safe: {
+    flex: 1,
   },
   
   // HEADER
@@ -492,19 +511,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  backButton: {
-    ...TEXT_STYLES.h3,
-    color: COLORS.primary,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#1A1A2E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  backText: {
+    fontSize: 24,
+    color: '#1A1A2E',
+    fontWeight: '600',
   },
   headerTitle: {
-    ...TEXT_STYLES.h5,
-    color: COLORS.textPrimary,
-    fontWeight: '700',
+    fontSize: 20,
+    color: '#1A1A2E',
+    fontWeight: '800',
   },
   
   // SCROLL VIEW
@@ -512,13 +543,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: SPACING.md,
+    padding: 20,
   },
   
   // LOCKED CARD
   lockedCard: {
-    borderColor: COLORS.error,
+    backgroundColor: '#FEE',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
     borderWidth: 2,
+    borderColor: '#FF6B6B',
   },
   lockedContent: {
     flexDirection: 'row',
@@ -526,73 +561,93 @@ const styles = StyleSheet.create({
   },
   lockedIcon: {
     fontSize: 32,
-    marginRight: SPACING.sm,
+    marginRight: 12,
   },
   lockedTextContainer: {
     flex: 1,
   },
   lockedTitle: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.error,
+    fontSize: 16,
+    color: '#FF6B6B',
     fontWeight: '700',
     marginBottom: 4,
   },
   lockedText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textSecondary,
+    fontSize: 13,
+    color: '#64748B',
+  },
+  
+  // CARD
+  card: {
+    borderRadius: 16,
+    marginBottom: 16,
+    overflow: 'hidden',
+    shadowColor: '#1A1A2E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  cardGrad: {
+    padding: 20,
+  },
+  cardContent: {
+    backgroundColor: '#FFF',
+    padding: 20,
   },
   
   // SECTION
   sectionTitle: {
-    ...TEXT_STYLES.h5,
-    color: COLORS.textPrimary,
+    fontSize: 16,
+    color: '#1A1A2E',
     fontWeight: '700',
-    marginBottom: SPACING.md,
+    marginBottom: 16,
   },
   sectionTitleWhite: {
-    ...TEXT_STYLES.h5,
-    color: COLORS.textWhite,
+    fontSize: 16,
+    color: '#FFF',
     fontWeight: '700',
-    marginBottom: SPACING.md,
+    marginBottom: 16,
   },
   
   // LOCKED FIELD
   lockedField: {
-    marginBottom: SPACING.sm,
-    paddingBottom: SPACING.sm,
+    marginBottom: 12,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.2)',
   },
   lockedFieldLabel: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textWhite,
+    fontSize: 12,
+    color: '#FFF',
     opacity: 0.8,
     marginBottom: 4,
   },
   lockedFieldValue: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.textWhite,
+    fontSize: 16,
+    color: '#FFF',
     fontWeight: '600',
   },
   
   // INPUT
   label: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textPrimary,
+    fontSize: 14,
+    color: '#1A1A2E',
     fontWeight: '600',
-    marginBottom: SPACING.xs,
+    marginBottom: 8,
   },
   input: {
-    ...TEXT_STYLES.body,
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
+    fontSize: 15,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 16,
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: '#E2E8F0',
+    color: '#1A1A2E',
   },
   inputDisabled: {
-    backgroundColor: COLORS.backgroundSecondary,
+    backgroundColor: '#F1F5F9',
     opacity: 0.6,
   },
   textArea: {
@@ -604,16 +659,18 @@ const styles = StyleSheet.create({
   infoBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderColor: COLORS.info,
-    borderWidth: 2,
+    backgroundColor: '#F0F9FF',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
   },
   infoIcon: {
-    fontSize: 20,
-    marginRight: SPACING.xs,
+    fontSize: 18,
+    marginRight: 8,
   },
   infoText: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textSecondary,
+    fontSize: 12,
+    color: '#64748B',
     flex: 1,
   },
   
@@ -621,38 +678,39 @@ const styles = StyleSheet.create({
   educationGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.xs,
+    gap: 8,
   },
   educationButton: {
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.md,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     borderWidth: 2,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFF',
   },
   educationButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    backgroundColor: '#FF6B9D',
+    borderColor: '#FF6B9D',
   },
   educationButtonDisabled: {
     opacity: 0.5,
   },
   educationButtonText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textPrimary,
+    fontSize: 14,
+    color: '#64748B',
     fontWeight: '600',
   },
   educationButtonTextActive: {
-    color: COLORS.textWhite,
+    color: '#FFF',
   },
   
   // BUTTONS
   buttonContainer: {
-    gap: SPACING.sm,
+    gap: 12,
+    marginTop: 8,
   },
   lockButton: {
-    borderColor: COLORS.error,
+    borderColor: '#FF6B6B',
     borderWidth: 2,
   },
 });

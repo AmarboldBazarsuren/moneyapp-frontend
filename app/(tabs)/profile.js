@@ -41,9 +41,9 @@ const ProfileScreen = () => {
         {
           icon: '👤',
           title: 'Хувийн мэдээлэл',
-          subtitle: 'Нэр, утас, имэйл',
+          subtitle: 'Нэр, утас, имэйл засах',
           color: '#FF6B9D',
-          onPress: () => {},
+          onPress: () => router.push('/profile-edit'),  // 🔧 ЗАСВАРЛАСАН
         },
         {
           icon: '✓',
@@ -70,6 +70,18 @@ const ProfileScreen = () => {
           subtitle: `${wallet?.creditScore || 0} оноо`,
           color: '#FFD93D',
           onPress: () => {},
+        },
+      ],
+    },
+    {
+      title: '💸 Гүйлгээ',
+      items: [
+        {
+          icon: '📋',
+          title: 'Татлагын түүх',
+          subtitle: 'Миний мөнгө татах түүх',
+          color: '#6BCF7F',
+          onPress: () => router.push('/withdrawal-history'),  // 🔧 ЗАСВАРЛАСАН
         },
       ],
     },
@@ -131,11 +143,11 @@ const ProfileScreen = () => {
             <View style={styles.userInfo}>
               <View style={styles.infoItem}>
                 <Text style={styles.infoIcon}>📧</Text>
-                <Text style={styles.infoText}>{user?.email}</Text>
+                <Text style={styles.infoText}>{user?.email || 'Имэйл байхгүй'}</Text>
               </View>
               <View style={styles.infoItem}>
                 <Text style={styles.infoIcon}>📱</Text>
-                <Text style={styles.infoText}>{user?.phone}</Text>
+                <Text style={styles.infoText}>{user?.phoneNumber}</Text>
               </View>
             </View>
 
