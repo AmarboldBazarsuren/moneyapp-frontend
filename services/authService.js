@@ -3,7 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_KEYS } from '../constants/config';
 
 class AuthService {
-  // Бүртгүүлэх
   async register(userData) {
     try {
       const response = await api.post('/auth/register', userData);
@@ -19,7 +18,6 @@ class AuthService {
     }
   }
 
-  // Нэвтрэх
   async login(phoneNumber, password) {
     try {
       const response = await api.post('/auth/login', {
@@ -38,7 +36,6 @@ class AuthService {
     }
   }
 
-  // Гарах
   async logout() {
     try {
       await api.removeToken();
@@ -49,7 +46,6 @@ class AuthService {
     }
   }
 
-  // Хэрэглэгчийн мэдээлэл авах
   async getMe() {
     try {
       const response = await api.get('/auth/me');
@@ -64,7 +60,6 @@ class AuthService {
     }
   }
 
-  // Нууц үг солих
   async changePassword(currentPassword, newPassword) {
     try {
       return await api.put('/auth/change-password', {
@@ -76,7 +71,48 @@ class AuthService {
     }
   }
 
-  // Хэрэглэгчийн мэдээлэл хадгалах
+  // ===== ШИНЭ: Профайл засварлах =====
+  
+  async updateProfile(profileData) {
+    try {
+      const response = await api.put('/auth/update-profile', profileData);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async lockProfile() {
+    try {
+      const response = await api.post('/auth/lock-profile');
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // ===== ADMIN =====
+  
+  async adminUnlockProfile(userId) {
+    try {
+      const response = await api.put(`/auth/admin/unlock-profile/${userId}`);
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async adminUpdateBankAccount(userId, bankAccountNumber) {
+    try {
+      const response = await api.put(`/auth/admin/update-bank-account/${userId}`, {
+        bankAccountNumber
+      });
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async saveUserData(user) {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
@@ -85,7 +121,6 @@ class AuthService {
     }
   }
 
-  // Хэрэглэгчийн мэдээлэл авах
   async getUserData() {
     try {
       const userData = await AsyncStorage.getItem(STORAGE_KEYS.USER_DATA);
@@ -96,7 +131,6 @@ class AuthService {
     }
   }
 
-  // Нэвтэрсэн эсэхийг шалгах
   async isAuthenticated() {
     const token = await api.getToken();
     return !!token;

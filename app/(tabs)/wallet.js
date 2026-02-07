@@ -10,12 +10,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { useWallet } from '../../hooks/useWallet';
-import { COLORS } from '../../styles/colors';
-import { SPACING } from '../../styles/globalStyles';
+import { COLORS, GRADIENTS, SHADOWS, RADIUS, SPACING } from '../../styles/colors';
 import { TEXT_STYLES } from '../../styles/typography';
 import {
   formatCurrency,
@@ -37,6 +37,7 @@ const WalletScreen = () => {
   } = useWallet();
 
   const [verifying, setVerifying] = useState(false);
+  const [selectedTab, setSelectedTab] = useState('all'); // all, income, expense
 
   const handleVerifyEmongola = async () => {
     Alert.alert(
@@ -62,11 +63,7 @@ const WalletScreen = () => {
                 refresh();
               }
             } catch (error) {
-              Alert.alert(
-                'Алдаа',
-                error.message || 'Алдаа гарлаа',
-                [{ text: 'OK' }]
-              );
+              Alert.alert('Алдаа', error.message || 'Алдаа гарлаа');
             } finally {
               setVerifying(false);
             }
@@ -76,18 +73,62 @@ const WalletScreen = () => {
     );
   };
 
+  // Орлого/Зарлагын filter
+  const filteredTransactions = transactions.filter(tx => {
+    if (selectedTab === 'all') return true;
+    
+    const incomeTypes = ['loan_disbursement', 'deposit'];
+    const expenseTypes = ['emongola_verification', 'loan_repayment', 'withdrawal', 'penalty'];
+    
+    if (selectedTab === 'income') {
+      return incomeTypes.includes(tx.type);
+    }
+    if (selectedTab === 'expense') {
+      return expenseTypes.includes(tx.type);
+    }
+    return true;
+  });
+
+  // Нийт орлого/зарлага тооцоолох
+  const calculateTotals = () => {
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    transactions.forEach(tx => {
+      const incomeTypes = ['loan_disbursement', 'deposit'];
+      if (incomeTypes.includes(tx.type) && tx.status === 'completed') {
+        totalIncome += tx.amount;
+      } else if (tx.status === 'completed') {
+        totalExpense += tx.amount;
+      }
+    });
+
+    return { totalIncome, totalExpense };
+  };
+
+  const { totalIncome, totalExpense } = calculateTotals();
+
   const renderTransaction = (transaction) => {
     const isIncome = ['loan_disbursement', 'deposit'].includes(transaction.type);
     const amount = isIncome ? `+${formatCurrency(transaction.amount)}` : `-${formatCurrency(transaction.amount)}`;
     const amountColor = isIncome ? COLORS.success : COLORS.error;
 
     return (
-      <Card 
-        key={transaction._id} 
-        padding="medium"
-        onPress={() => router.push(`/transaction-detail/${transaction._id}`)}>
-        <View style={styles.transactionRow}>
-          <View style={styles.transactionLeft}>
+      <TouchableOpacity
+        key={transaction._id}
+        style={styles.transactionCard}
+        onPress={() => router.push(`/transaction-detail/${transaction._id}`)}
+        activeOpacity={0.7}>
+        <View style={styles.transactionLeft}>
+          <View style={[
+            styles.transactionIcon,
+            { backgroundColor: isIncome ? COLORS.successLight : COLORS.errorLight }
+          ]}>
+            <Text style={styles.transactionEmoji}>
+              {isIncome ? '📥' : '📤'}
+            </Text>
+          </View>
+          <View>
             <Text style={styles.transactionType}>
               {getTransactionTypeText(transaction.type)}
             </Text>
@@ -99,23 +140,12 @@ const WalletScreen = () => {
                 <Text style={styles.pendingText}>Хүлээгдэж байна</Text>
               </View>
             )}
-            {transaction.status === 'failed' && (
-              <View style={styles.failedBadge}>
-                <Text style={styles.failedText}>Амжилтгүй</Text>
-              </View>
-            )}
           </View>
-          <Text style={[styles.transactionAmount, { color: amountColor }]}>
-            {amount}
-          </Text>
         </View>
-        
-        {transaction.description && (
-          <Text style={styles.transactionDescription}>
-            {transaction.description}
-          </Text>
-        )}
-      </Card>
+        <Text style={[styles.transactionAmount, { color: amountColor }]}>
+          {amount}
+        </Text>
+      </TouchableOpacity>
     );
   };
 
@@ -142,35 +172,24 @@ const WalletScreen = () => {
         }}
         scrollEventThrottle={400}
         showsVerticalScrollIndicator={false}>
-        {/* Header */}
+        
+        {/* 🎨 HEADER */}
         <Text style={styles.headerTitle}>Хэтэвч</Text>
 
-        {/* Balance Card */}
-        <Card style={styles.balanceCard} padding="large">
-          <Text style={styles.balanceLabel}>Үлдэгдэл</Text>
+        {/* 💰 ҮЛДЭГДЭЛ КАРТ - Premium Gradient */}
+        <LinearGradient
+          colors={wallet?.isEmongolaVerified ? GRADIENTS.primary : GRADIENTS.fire}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.balanceCard, SHADOWS.primaryGlow]}>
+          
+          <Text style={styles.balanceLabel}>Хэтэвчний үлдэгдэл</Text>
           <Text style={styles.balanceAmount}>
             {formatCurrency(wallet?.balance || 0)}
           </Text>
 
-          {/* E-Mongolia баталгаажаагүй бол */}
-          {!wallet?.isEmongolaVerified ? (
-            <View style={styles.unverifiedContainer}>
-              <View style={styles.warningBox}>
-                <Text style={styles.warningIcon}>⚠️</Text>
-                <Text style={styles.warningText}>
-                  E-Mongolia мэдээлэл баталгаажаагүй байна
-                </Text>
-              </View>
-              <Button
-                title={`Баталгаажуулах (${formatCurrency(APP_CONFIG.EMONGOLA_VERIFICATION_FEE)})`}
-                onPress={handleVerifyEmongola}
-                loading={verifying}
-                fullWidth
-                style={styles.verifyButton}
-              />
-            </View>
-          ) : (
-            <View style={styles.creditContainer}>
+          {wallet?.isEmongolaVerified ? (
+            <>
               <View style={styles.verifiedBadge}>
                 <Text style={styles.verifiedIcon}>✓</Text>
                 <Text style={styles.verifiedText}>E-Mongolia баталгаажсан</Text>
@@ -185,96 +204,145 @@ const WalletScreen = () => {
                 </Text>
               </View>
               <View style={styles.creditRow}>
-                <Text style={styles.creditLabel}>Ашигласан:</Text>
-                <Text style={styles.creditValue}>
-                  {formatCurrency((wallet?.totalBorrowed || 0) - (wallet?.totalRepaid || 0))}
-                </Text>
-              </View>
-              <View style={styles.divider} />
-              <View style={styles.creditRow}>
-                <Text style={styles.creditLabelBold}>Боломжит:</Text>
+                <Text style={styles.creditLabel}>Боломжит:</Text>
                 <Text style={styles.creditValueBold}>
                   {formatCurrency(wallet?.availableCredit || 0)}
                 </Text>
               </View>
+            </>
+          ) : (
+            <View style={styles.unverifiedContainer}>
+              <View style={styles.warningBox}>
+                <Text style={styles.warningIcon}>⚠️</Text>
+                <Text style={styles.warningText}>
+                  E-Mongolia мэдээлэл баталгаажаагүй
+                </Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.verifyButton}
+                onPress={handleVerifyEmongola}>
+                <Text style={styles.verifyButtonText}>
+                  Баталгаажуулах ({formatCurrency(APP_CONFIG.EMONGOLA_VERIFICATION_FEE)})
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
-        </Card>
+        </LinearGradient>
 
-        {/* Quick Actions */}
+        {/* ⚡ ХУРДАН ҮЙЛДЛҮҮД */}
         <View style={styles.quickActions}>
           <TouchableOpacity
-            style={styles.actionCard}
+            style={styles.actionButton}
             onPress={() => router.push('/deposit')}>
-            <View style={styles.actionIcon}>
-              <Text style={styles.actionEmoji}>💰</Text>
-            </View>
+            <LinearGradient
+              colors={GRADIENTS.ocean}
+              style={styles.actionGradient}>
+              <Text style={styles.actionIcon}>💰</Text>
+            </LinearGradient>
             <Text style={styles.actionText}>Цэнэглэх</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionCard}
+            style={styles.actionButton}
             onPress={() => router.push('/withdraw')}>
-            <View style={styles.actionIcon}>
-              <Text style={styles.actionEmoji}>💸</Text>
-            </View>
-            <Text style={styles.actionText}>Мөнгө татах</Text>
+            <LinearGradient
+              colors={GRADIENTS.sunset}
+              style={styles.actionGradient}>
+              <Text style={styles.actionIcon}>💸</Text>
+            </LinearGradient>
+            <Text style={styles.actionText}>Татах</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.actionCard}
+            style={styles.actionButton}
             onPress={() => router.push('/withdrawal-history')}>
-            <View style={styles.actionIcon}>
-              <Text style={styles.actionEmoji}>📋</Text>
-            </View>
-            <Text style={styles.actionText}>Татлагын түүх</Text>
+            <LinearGradient
+              colors={GRADIENTS.forest}
+              style={styles.actionGradient}>
+              <Text style={styles.actionIcon}>📋</Text>
+            </LinearGradient>
+            <Text style={styles.actionText}>Түүх</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Statistics */}
+        {/* 📊 ОРЛОГО/ЗАРЛАГА - Statistics Cards */}
         {wallet?.isEmongolaVerified && (
           <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>
-                {formatCurrency(wallet?.totalBorrowed || 0)}
+            <Card variant="outline" padding="medium" style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <Text style={styles.statIcon}>📈</Text>
+                <Text style={styles.statLabel}>Нийт орлого</Text>
+              </View>
+              <Text style={[styles.statValue, { color: COLORS.success }]}>
+                {formatCurrency(totalIncome)}
               </Text>
-              <Text style={styles.statLabel}>Нийт авсан</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statValue}>
-                {formatCurrency(wallet?.totalRepaid || 0)}
+            </Card>
+
+            <Card variant="outline" padding="medium" style={styles.statCard}>
+              <View style={styles.statHeader}>
+                <Text style={styles.statIcon}>📉</Text>
+                <Text style={styles.statLabel}>Нийт зарлага</Text>
+              </View>
+              <Text style={[styles.statValue, { color: COLORS.error }]}>
+                {formatCurrency(totalExpense)}
               </Text>
-              <Text style={styles.statLabel}>Нийт төлсөн</Text>
-            </View>
+            </Card>
           </View>
         )}
 
-        {/* Transactions */}
+        {/* 📝 ГҮЙЛГЭЭНИЙ ТҮҮХ - Tab система */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Гүйлгээний түүх</Text>
             {transactions.length > 0 && (
               <TouchableOpacity onPress={refresh}>
-                <Text style={styles.refreshText}>🔄 Шинэчлэх</Text>
+                <Text style={styles.refreshText}>🔄</Text>
               </TouchableOpacity>
             )}
           </View>
+
+          {/* TAB NAVIGATION */}
+          <View style={styles.tabContainer}>
+            <TouchableOpacity
+              style={[styles.tab, selectedTab === 'all' && styles.tabActive]}
+              onPress={() => setSelectedTab('all')}>
+              <Text style={[styles.tabText, selectedTab === 'all' && styles.tabTextActive]}>
+                Бүгд
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tab, selectedTab === 'income' && styles.tabActive]}
+              onPress={() => setSelectedTab('income')}>
+              <Text style={[styles.tabText, selectedTab === 'income' && styles.tabTextActive]}>
+                Орлого
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.tab, selectedTab === 'expense' && styles.tabActive]}
+              onPress={() => setSelectedTab('expense')}>
+              <Text style={[styles.tabText, selectedTab === 'expense' && styles.tabTextActive]}>
+                Зарлага
+              </Text>
+            </TouchableOpacity>
+          </View>
           
-          {transactions.length === 0 ? (
+          {/* TRANSACTIONS LIST */}
+          {filteredTransactions.length === 0 ? (
             <Card padding="large">
               <Text style={styles.emptyIcon}>📭</Text>
-              <Text style={styles.emptyText}>Гүйлгээ олдсонгүй</Text>
-              <Text style={styles.emptySubtext}>
-                Та гүйлгээ хийгээгүй байна
+              <Text style={styles.emptyText}>
+                {selectedTab === 'all' ? 'Гүйлгээ олдсонгүй' :
+                 selectedTab === 'income' ? 'Орлого олдсонгүй' :
+                 'Зарлага олдсонгүй'}
               </Text>
             </Card>
           ) : (
             <>
-              {transactions.map(renderTransaction)}
+              {filteredTransactions.map(renderTransaction)}
               {isLoading && hasMore && (
-                <Card padding="medium">
-                  <Text style={styles.loadingText}>Ачааллаж байна...</Text>
-                </Card>
+                <Text style={styles.loadingText}>Ачааллаж байна...</Text>
               )}
             </>
           )}
@@ -287,7 +355,7 @@ const WalletScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.backgroundGray,
+    backgroundColor: COLORS.background,
   },
   scrollView: {
     flex: 1,
@@ -295,73 +363,58 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: SPACING.md,
   },
+  
+  // HEADER
   headerTitle: {
     ...TEXT_STYLES.h2,
     color: COLORS.textPrimary,
     fontWeight: '700',
     marginBottom: SPACING.lg,
   },
+  
+  // BALANCE CARD
   balanceCard: {
-    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.lg,
     marginBottom: SPACING.lg,
   },
   balanceLabel: {
     ...TEXT_STYLES.body,
     color: COLORS.textWhite,
     opacity: 0.9,
-    marginBottom: SPACING.xs,
+    marginBottom: 8,
   },
   balanceAmount: {
     ...TEXT_STYLES.h1,
     color: COLORS.textWhite,
     fontWeight: '700',
+    fontSize: 40,
     marginBottom: SPACING.md,
-  },
-  unverifiedContainer: {
-    marginTop: SPACING.md,
-  },
-  warningBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.warning,
-    padding: SPACING.sm,
-    borderRadius: 8,
-    marginBottom: SPACING.md,
-  },
-  warningIcon: {
-    fontSize: 20,
-    marginRight: SPACING.xs,
-  },
-  warningText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    fontWeight: '600',
-    flex: 1,
-  },
-  verifyButton: {
-    backgroundColor: COLORS.textWhite,
-  },
-  creditContainer: {
-    marginTop: SPACING.md,
   },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.success,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.md,
-    borderRadius: 20,
-    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: RADIUS.pill,
+    alignSelf: 'flex-start',
   },
   verifiedIcon: {
+    color: COLORS.textWhite,
     fontSize: 16,
-    marginRight: SPACING.xs / 2,
+    marginRight: 4,
   },
   verifiedText: {
     ...TEXT_STYLES.body,
     color: COLORS.textWhite,
     fontWeight: '600',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: COLORS.textWhite,
+    opacity: 0.2,
+    marginVertical: SPACING.md,
   },
   creditRow: {
     flexDirection: 'row',
@@ -378,76 +431,101 @@ const styles = StyleSheet.create({
     color: COLORS.textWhite,
     fontWeight: '600',
   },
-  creditLabelBold: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.textWhite,
-    fontWeight: '700',
-  },
   creditValueBold: {
     ...TEXT_STYLES.bodyLarge,
     color: COLORS.textWhite,
     fontWeight: '700',
   },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.textWhite,
-    opacity: 0.3,
-    marginVertical: SPACING.sm,
+  unverifiedContainer: {
+    marginTop: SPACING.md,
   },
+  warningBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: SPACING.sm,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.sm,
+  },
+  warningIcon: {
+    fontSize: 20,
+    marginRight: SPACING.xs,
+  },
+  warningText: {
+    ...TEXT_STYLES.body,
+    color: COLORS.textWhite,
+    fontWeight: '600',
+    flex: 1,
+  },
+  verifyButton: {
+    backgroundColor: COLORS.textWhite,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+  },
+  verifyButtonText: {
+    ...TEXT_STYLES.bodyLarge,
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  
+  // QUICK ACTIONS
   quickActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: SPACING.lg,
+    gap: SPACING.sm,
   },
-  actionCard: {
+  actionButton: {
     flex: 1,
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: SPACING.md,
     alignItems: 'center',
-    marginHorizontal: SPACING.xs / 2,
   },
-  actionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: COLORS.primaryLight,
+  actionGradient: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: RADIUS.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.xs,
   },
-  actionEmoji: {
-    fontSize: 24,
+  actionIcon: {
+    fontSize: 32,
   },
   actionText: {
     ...TEXT_STYLES.body,
     color: COLORS.textPrimary,
     fontWeight: '600',
-    textAlign: 'center',
   },
+  
+  // STATISTICS
   statsContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: SPACING.sm,
     marginBottom: SPACING.lg,
   },
   statCard: {
     flex: 1,
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: SPACING.md,
-    marginHorizontal: SPACING.xs / 2,
-    alignItems: 'center',
+    borderWidth: 2,
   },
-  statValue: {
-    ...TEXT_STYLES.h4,
-    color: COLORS.primary,
-    fontWeight: '700',
-    marginBottom: SPACING.xs / 2,
+  statHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.xs,
+  },
+  statIcon: {
+    fontSize: 20,
+    marginRight: SPACING.xs,
   },
   statLabel: {
     ...TEXT_STYLES.caption,
     color: COLORS.textSecondary,
   },
+  statValue: {
+    ...TEXT_STYLES.h4,
+    fontWeight: '700',
+  },
+  
+  // SECTION
   section: {
     marginBottom: SPACING.lg,
   },
@@ -463,44 +541,79 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   refreshText: {
+    fontSize: 20,
+  },
+  
+  // TABS
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.backgroundSecondary,
+    borderRadius: RADIUS.md,
+    padding: 4,
+    marginBottom: SPACING.md,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: SPACING.xs,
+    alignItems: 'center',
+    borderRadius: RADIUS.sm,
+  },
+  tabActive: {
+    backgroundColor: COLORS.white,
+  },
+  tabText: {
     ...TEXT_STYLES.body,
-    color: COLORS.primary,
+    color: COLORS.textSecondary,
     fontWeight: '600',
   },
-  transactionRow: {
+  tabTextActive: {
+    color: COLORS.primary,
+  },
+  
+  // TRANSACTION CARD
+  transactionCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+    marginBottom: SPACING.sm,
+    ...SHADOWS.small,
   },
   transactionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
+  },
+  transactionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.sm,
+  },
+  transactionEmoji: {
+    fontSize: 24,
   },
   transactionType: {
     ...TEXT_STYLES.body,
     color: COLORS.textPrimary,
     fontWeight: '600',
-    marginBottom: SPACING.xs / 2,
+    marginBottom: 4,
   },
   transactionDate: {
     ...TEXT_STYLES.caption,
     color: COLORS.textSecondary,
   },
-  transactionAmount: {
-    ...TEXT_STYLES.bodyLarge,
-    fontWeight: '700',
-  },
-  transactionDescription: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
   pendingBadge: {
     backgroundColor: COLORS.warning,
     paddingHorizontal: SPACING.xs,
     paddingVertical: 2,
-    borderRadius: 8,
+    borderRadius: RADIUS.xs,
+    marginTop: 4,
     alignSelf: 'flex-start',
-    marginTop: SPACING.xs / 2,
   },
   pendingText: {
     ...TEXT_STYLES.caption,
@@ -508,20 +621,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 10,
   },
-  failedBadge: {
-    backgroundColor: COLORS.error,
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 2,
-    borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginTop: SPACING.xs / 2,
+  transactionAmount: {
+    ...TEXT_STYLES.h5,
+    fontWeight: '700',
   },
-  failedText: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textWhite,
-    fontWeight: '600',
-    fontSize: 10,
-  },
+  
+  // EMPTY STATE
   emptyIcon: {
     fontSize: 50,
     textAlign: 'center',
@@ -532,17 +637,12 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     textAlign: 'center',
     fontWeight: '600',
-    marginBottom: SPACING.xs / 2,
-  },
-  emptySubtext: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textDisabled,
-    textAlign: 'center',
   },
   loadingText: {
     ...TEXT_STYLES.body,
     color: COLORS.textSecondary,
     textAlign: 'center',
+    marginTop: SPACING.md,
   },
 });
 
