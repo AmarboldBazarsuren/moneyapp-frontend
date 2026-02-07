@@ -30,16 +30,53 @@ function RootLayoutNav() {
         }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="loan-request"
+        <Stack.Screen 
+          name="loan-request" 
           options={{
             presentation: 'modal',
+            headerShown: false,
           }}
         />
-        <Stack.Screen
-          name="loan-detail/[id]"
+        <Stack.Screen 
+          name="loan-detail/[id]" 
           options={{
             presentation: 'card',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="deposit" 
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="withdraw" 
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="withdrawal-history" 
+          options={{
+            presentation: 'card',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="withdrawal-detail/[id]" 
+          options={{
+            presentation: 'card',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen 
+          name="transaction-detail/[id]" 
+          options={{
+            presentation: 'card',
+            headerShown: false,
           }}
         />
       </Stack>

@@ -10,10 +10,41 @@ class WalletService {
     }
   }
 
-  // Хэтэвч баталгаажуулах
-  async verifyWallet() {
+  // E-Mongolia баталгаажуулах хүсэлт
+  async verifyEmongola() {
     try {
-      return await api.post('/wallet/verify');
+      return await api.post('/wallet/verify-emongola');
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Хэтэвч цэнэглэх хүсэлт
+  async requestDeposit(amount) {
+    try {
+      return await api.post('/wallet/deposit', { amount });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Мөнгө татах хүсэлт
+  async requestWithdrawal(withdrawalData) {
+    try {
+      return await api.post('/wallet/withdraw', withdrawalData);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Миний мөнгө татах хүсэлтүүд
+  async getMyWithdrawals(status = null, page = 1, limit = 20) {
+    try {
+      const params = { page, limit };
+      if (status) {
+        params.status = status;
+      }
+      return await api.get('/wallet/withdrawals', params);
     } catch (error) {
       throw error;
     }

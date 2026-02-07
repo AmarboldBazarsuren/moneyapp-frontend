@@ -122,20 +122,52 @@ export const getLoanStatusText = (status) => {
 };
 
 /**
- * Гүйлгээний төрөл монгол хэлээр
+ * Гүйлгээний төрөл монгол хэлээр - ШИНЭЧИЛСЭН
  * @param {string} type - Гүйлгээний төрөл
  * @returns {string} - Монгол төрөл
  */
 export const getTransactionTypeText = (type) => {
   const texts = {
-    wallet_verification: 'Хэтэвч баталгаажуулалт',
+    emongola_verification: 'E-Mongolia баталгаажуулалт',
+    deposit: 'Хэтэвч цэнэглэлт',
     loan_disbursement: 'Зээл олголт',
     loan_repayment: 'Зээл төлөлт',
-    deposit: 'Орлого',
-    withdrawal: 'Зарлага',
+    withdrawal: 'Мөнгө татсан',
     penalty: 'Алданги',
   };
   return texts[type] || type;
+};
+
+/**
+ * Мөнгө татах хүсэлтийн статусын өнгө
+ * @param {string} status - Withdrawal статус
+ * @returns {string} - Өнгө
+ */
+export const getWithdrawalStatusColor = (status) => {
+  const colors = {
+    pending: '#FF9800',    // Шар
+    approved: '#2196F3',   // Цэнхэр
+    completed: '#4CAF50',  // Ногоон
+    rejected: '#F44336',   // Улаан
+    cancelled: '#9E9E9E',  // Саарал
+  };
+  return colors[status] || '#9E9E9E';
+};
+
+/**
+ * Мөнгө татах хүсэлтийн статус монгол хэлээр
+ * @param {string} status - Withdrawal статус
+ * @returns {string} - Монгол статус
+ */
+export const getWithdrawalStatusText = (status) => {
+  const texts = {
+    pending: 'Хүлээгдэж байна',
+    approved: 'Зөвшөөрөгдсөн',
+    completed: 'Дууссан',
+    rejected: 'Татгалзсан',
+    cancelled: 'Цуцлагдсан',
+  };
+  return texts[status] || status;
 };
 
 /**
@@ -155,4 +187,37 @@ export const formatDaysText = (days) => {
  */
 export const formatPercent = (percent) => {
   return `${percent}%`;
+};
+
+/**
+ * Дансны дугаар нуух (4 орон харуулах)
+ * @param {string} accountNumber - Дансны дугаар
+ * @returns {string} - Нуусан дугаар
+ */
+export const maskAccountNumber = (accountNumber) => {
+  if (!accountNumber) return '';
+  const cleaned = accountNumber.replace(/\s/g, '');
+  if (cleaned.length <= 4) return accountNumber;
+  const lastFour = cleaned.slice(-4);
+  const masked = '*'.repeat(cleaned.length - 4);
+  return `${masked}${lastFour}`;
+};
+
+/**
+ * Банкны нэр богино болгох
+ * @param {string} bankName - Банкны нэр
+ * @returns {string} - Богино нэр
+ */
+export const formatBankName = (bankName) => {
+  const shortNames = {
+    'Хаан банк': 'Хаан',
+    'Төрийн банк': 'ТБ',
+    'Голомт банк': 'Голомт',
+    'Худалдаа хөгжлийн банк': 'ХХБ',
+    'Капитрон банк': 'Капитрон',
+    'Ариг банк': 'Ариг',
+    'Богд банк': 'Богд',
+    'Чингис хаан банк': 'Чингис',
+  };
+  return shortNames[bankName] || bankName;
 };

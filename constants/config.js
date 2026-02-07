@@ -3,12 +3,7 @@ import { Platform } from 'react-native';
 
 // Компьютерийн IP хаяг - ЗААВАЛ ӨӨРЧЛӨХ!
 const DEV_API_URL = Platform.select({
-  // Web browser дээр localhost ашиглаж болно
   web: 'http://localhost:5000/api',
-  
-  // Mobile device (Android/iOS) дээр компьютерийн IP шаардлагатай
-  // Windows CMD: ipconfig -> IPv4 Address
-  // Mac: ifconfig | grep "inet "
   default: 'http://192.168.88.4:5000/api',  // ← ЭНЭ IP-г солих!!!
 });
 
@@ -50,10 +45,12 @@ export const APP_CONFIG = {
   APP_NAME: 'MoneyApp',
   VERSION: '1.0.0',
   LOAN_INTEREST_RATE: 2.8,
-  WALLET_VERIFICATION_FEE: 3000,
+  EMONGOLA_VERIFICATION_FEE: 3000,  // ШИНЭ: E-Mongolia баталгаажуулалт
   MIN_LOAN_AMOUNT: 10000,
   MAX_LOAN_AMOUNT: 5000000,
-  LOAN_TERMS: [7, 14, 21, 30], // хоногоор
+  MIN_WITHDRAWAL_AMOUNT: 1000,      // ШИНЭ: Мөнгө татах хамгийн бага
+  MIN_DEPOSIT_AMOUNT: 1000,         // ШИНЭ: Цэнэглэх хамгийн бага
+  LOAN_TERMS: [7, 14, 21, 30],
 };
 
 // Storage Keys
@@ -78,4 +75,9 @@ export const SCREENS = {
   // Loan Screens
   LOAN_REQUEST: 'loan-request',
   LOAN_DETAIL: 'loan-detail',
+  
+  // Wallet Screens
+  DEPOSIT: 'deposit',
+  WITHDRAW: 'withdraw',
+  WITHDRAWAL_DETAIL: 'withdrawal-detail',
 };

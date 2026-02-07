@@ -6,7 +6,9 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
@@ -20,24 +22,26 @@ import {
   formatDate,
   getTransactionTypeText,
 } from '../../utils/formatters';
+import { APP_CONFIG } from '../../constants/config';
 
 const WalletScreen = () => {
+  const router = useRouter();
   const { wallet } = useAuth();
   const {
     transactions,
     isLoading,
     refresh,
-    verifyWallet,
+    verifyEmongola,
     loadMore,
     hasMore,
   } = useWallet();
 
   const [verifying, setVerifying] = useState(false);
 
-  const handleVerifyWallet = async () => {
+  const handleVerifyEmongola = async () => {
     Alert.alert(
-      'Хэтэвч баталгаажуулах',
-      'Та 3,000₮ төлж хэтэвчээ баталгаажуулах уу?',
+      'E-Mongolia баталгаажуулах',
+      `Та ${formatCurrency(APP_CONFIG.EMONGOLA_VERIFICATION_FEE)} төлж E-Mongolia мэдээллээ баталгаажуулах уу?`,
       [
         { text: 'Цуцлах', style: 'cancel' },
         {
@@ -45,14 +49,17 @@ const WalletScreen = () => {
           onPress: async () => {
             try {
               setVerifying(true);
-              const response = await verifyWallet();
+              const response = await verifyEmongola();
               
               if (response.success) {
                 Alert.alert(
                   'Амжилттай',
-                  'Баталгаажуулалтын төлбөр үүслээ. QPay-р төлнө үү.',
+                  response.data?.wallet?.isEmongolaVerified
+                    ? 'E-Mongolia мэдээлэл амжилттай баталгаажлаа!'
+                    : 'Баталгаажуулалтын төлбөр үүслээ. QPay-р төлнө үү.',
                   [{ text: 'OK' }]
                 );
+                refresh();
               }
             } catch (error) {
               Alert.alert(
@@ -75,7 +82,10 @@ const WalletScreen = () => {
     const amountColor = isIncome ? COLORS.success : COLORS.error;
 
     return (
-      <Card key={transaction._id} padding="medium">
+      <Card 
+        key={transaction._id} 
+        padding="medium"
+        onPress={() => router.push(`/transaction-detail/${transaction._id}`)}>
         <View style={styles.transactionRow}>
           <View style={styles.transactionLeft}>
             <Text style={styles.transactionType}>
@@ -84,6 +94,16 @@ const WalletScreen = () => {
             <Text style={styles.transactionDate}>
               {formatDate(transaction.createdAt, true)}
             </Text>
+            {transaction.status === 'pending' && (
+              <View style={styles.pendingBadge}>
+                <Text style={styles.pendingText}>Хүлээгдэж байна</Text>
+              </View>
+            )}
+            {transaction.status === 'failed' && (
+              <View style={styles.failedBadge}>
+                <Text style={styles.failedText}>Амжилтгүй</Text>
+              </View>
+            )}
           </View>
           <Text style={[styles.transactionAmount, { color: amountColor }]}>
             {amount}
@@ -132,17 +152,18 @@ const WalletScreen = () => {
             {formatCurrency(wallet?.balance || 0)}
           </Text>
 
-          {!wallet?.isVerified ? (
+          {/* E-Mongolia баталгаажаагүй бол */}
+          {!wallet?.isEmongolaVerified ? (
             <View style={styles.unverifiedContainer}>
               <View style={styles.warningBox}>
                 <Text style={styles.warningIcon}>⚠️</Text>
                 <Text style={styles.warningText}>
-                  Хэтэвч баталгаажаагүй байна
+                  E-Mongolia мэдээлэл баталгаажаагүй байна
                 </Text>
               </View>
               <Button
-                title="Баталгаажуулах (3,000₮)"
-                onPress={handleVerifyWallet}
+                title={`Баталгаажуулах (${formatCurrency(APP_CONFIG.EMONGOLA_VERIFICATION_FEE)})`}
+                onPress={handleVerifyEmongola}
                 loading={verifying}
                 fullWidth
                 style={styles.verifyButton}
@@ -150,6 +171,13 @@ const WalletScreen = () => {
             </View>
           ) : (
             <View style={styles.creditContainer}>
+              <View style={styles.verifiedBadge}>
+                <Text style={styles.verifiedIcon}>✓</Text>
+                <Text style={styles.verifiedText}>E-Mongolia баталгаажсан</Text>
+              </View>
+              
+              <View style={styles.divider} />
+              
               <View style={styles.creditRow}>
                 <Text style={styles.creditLabel}>Зээлийн лимит:</Text>
                 <Text style={styles.creditValue}>
@@ -173,8 +201,38 @@ const WalletScreen = () => {
           )}
         </Card>
 
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => router.push('/deposit')}>
+            <View style={styles.actionIcon}>
+              <Text style={styles.actionEmoji}>💰</Text>
+            </View>
+            <Text style={styles.actionText}>Цэнэглэх</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => router.push('/withdraw')}>
+            <View style={styles.actionIcon}>
+              <Text style={styles.actionEmoji}>💸</Text>
+            </View>
+            <Text style={styles.actionText}>Мөнгө татах</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => router.push('/withdrawal-history')}>
+            <View style={styles.actionIcon}>
+              <Text style={styles.actionEmoji}>📋</Text>
+            </View>
+            <Text style={styles.actionText}>Татлагын түүх</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Statistics */}
-        {wallet?.isVerified && (
+        {wallet?.isEmongolaVerified && (
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
               <Text style={styles.statValue}>
@@ -193,14 +251,32 @@ const WalletScreen = () => {
 
         {/* Transactions */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Гүйлгээний түүх</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Гүйлгээний түүх</Text>
+            {transactions.length > 0 && (
+              <TouchableOpacity onPress={refresh}>
+                <Text style={styles.refreshText}>🔄 Шинэчлэх</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           
           {transactions.length === 0 ? (
             <Card padding="large">
+              <Text style={styles.emptyIcon}>📭</Text>
               <Text style={styles.emptyText}>Гүйлгээ олдсонгүй</Text>
+              <Text style={styles.emptySubtext}>
+                Та гүйлгээ хийгээгүй байна
+              </Text>
             </Card>
           ) : (
-            transactions.map(renderTransaction)
+            <>
+              {transactions.map(renderTransaction)}
+              {isLoading && hasMore && (
+                <Card padding="medium">
+                  <Text style={styles.loadingText}>Ачааллаж байна...</Text>
+                </Card>
+              )}
+            </>
           )}
         </View>
       </ScrollView>
@@ -268,6 +344,25 @@ const styles = StyleSheet.create({
   creditContainer: {
     marginTop: SPACING.md,
   },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.success,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    borderRadius: 20,
+    marginBottom: SPACING.sm,
+  },
+  verifiedIcon: {
+    fontSize: 16,
+    marginRight: SPACING.xs / 2,
+  },
+  verifiedText: {
+    ...TEXT_STYLES.body,
+    color: COLORS.textWhite,
+    fontWeight: '600',
+  },
   creditRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -299,6 +394,37 @@ const styles = StyleSheet.create({
     opacity: 0.3,
     marginVertical: SPACING.sm,
   },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.lg,
+  },
+  actionCard: {
+    flex: 1,
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: SPACING.md,
+    alignItems: 'center',
+    marginHorizontal: SPACING.xs / 2,
+  },
+  actionIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.sm,
+  },
+  actionEmoji: {
+    fontSize: 24,
+  },
+  actionText: {
+    ...TEXT_STYLES.body,
+    color: COLORS.textPrimary,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -325,11 +451,21 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: SPACING.lg,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
   sectionTitle: {
     ...TEXT_STYLES.h5,
     color: COLORS.textPrimary,
     fontWeight: '700',
-    marginBottom: SPACING.md,
+  },
+  refreshText: {
+    ...TEXT_STYLES.body,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   transactionRow: {
     flexDirection: 'row',
@@ -358,7 +494,52 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginTop: SPACING.xs,
   },
+  pendingBadge: {
+    backgroundColor: COLORS.warning,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: SPACING.xs / 2,
+  },
+  pendingText: {
+    ...TEXT_STYLES.caption,
+    color: COLORS.textWhite,
+    fontWeight: '600',
+    fontSize: 10,
+  },
+  failedBadge: {
+    backgroundColor: COLORS.error,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: 2,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: SPACING.xs / 2,
+  },
+  failedText: {
+    ...TEXT_STYLES.caption,
+    color: COLORS.textWhite,
+    fontWeight: '600',
+    fontSize: 10,
+  },
+  emptyIcon: {
+    fontSize: 50,
+    textAlign: 'center',
+    marginBottom: SPACING.sm,
+  },
   emptyText: {
+    ...TEXT_STYLES.bodyLarge,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    fontWeight: '600',
+    marginBottom: SPACING.xs / 2,
+  },
+  emptySubtext: {
+    ...TEXT_STYLES.body,
+    color: COLORS.textDisabled,
+    textAlign: 'center',
+  },
+  loadingText: {
     ...TEXT_STYLES.body,
     color: COLORS.textSecondary,
     textAlign: 'center',
