@@ -1,8 +1,20 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
+
+// Компьютерийн IP хаяг - ЗААВАЛ ӨӨРЧЛӨХ!
+const DEV_API_URL = Platform.select({
+  // Web browser дээр localhost ашиглаж болно
+  web: 'http://localhost:5000/api',
+  
+  // Mobile device (Android/iOS) дээр компьютерийн IP шаардлагатай
+  // Windows CMD: ipconfig -> IPv4 Address
+  // Mac: ifconfig | grep "inet "
+  default: 'http://192.168.88.4:5000/api',  // ← ЭНЭ IP-г солих!!!
+});
 
 const ENV = {
   dev: {
-    apiUrl: 'http://localhost:5000/api',
+    apiUrl: DEV_API_URL,
   },
   staging: {
     apiUrl: 'https://staging-api.moneyapp.mn/api',
@@ -14,6 +26,9 @@ const ENV = {
 
 const getEnvVars = () => {
   if (__DEV__) {
+    console.log('🔧 Development mode');
+    console.log('📡 API URL:', ENV.dev.apiUrl);
+    console.log('📱 Platform:', Platform.OS);
     return ENV.dev;
   } else if (Constants.expoConfig?.extra?.environment === 'staging') {
     return ENV.staging;

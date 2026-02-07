@@ -4,14 +4,12 @@
     "slug": "moneyapp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
     "scheme": "moneyapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#E53935"
+      "backgroundColor": "#2563EB"
     },
     "ios": {
       "supportsTablet": true,
@@ -19,8 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#E53935"
+        "backgroundColor": "#2563EB"
       },
       "package": "com.moneyapp.app",
       "permissions": [
@@ -29,20 +26,10 @@
       ]
     },
     "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "static"
     },
     "plugins": [
-      "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#E53935"
-        }
-      ]
+      "expo-router"
     ],
     "experiments": {
       "typedRoutes": true
