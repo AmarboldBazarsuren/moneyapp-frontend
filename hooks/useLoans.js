@@ -6,6 +6,7 @@ export const useLoans = () => {
   const { isAuthenticated, refreshUser } = useAuth();
   const [loans, setLoans] = useState([]);
   const [activeLoans, setActiveLoans] = useState([]);
+  const [completedLoans, setCompletedLoans] = useState([]); // ✅ НЭМЭХ
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [hasMore, setHasMore] = useState(true);
@@ -60,6 +61,26 @@ export const useLoans = () => {
     }
   }, [isAuthenticated]);
 
+  // ✅ ШИНЭ: Төлөгдсөн зээлүүд авах
+  const loadCompletedLoans = useCallback(async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await loanService.getMyLoans('repaid', 1, 20);
+      
+      if (response.success) {
+        setCompletedLoans(response.data.loans);
+      }
+    } catch (err) {
+      setError(err.message || 'Алдаа гарлаа');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated]);
+
   // Зээл авах хүсэлт
   const requestLoan = useCallback(async (loanData) => {
     try {
@@ -94,6 +115,7 @@ export const useLoans = () => {
       if (response.success) {
         await loadLoans(null, 1, true);
         await loadActiveLoans();
+        await loadCompletedLoans(); // ✅ НЭМЭХ
         await refreshUser();
       }
       
@@ -104,7 +126,7 @@ export const useLoans = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [loadLoans, loadActiveLoans, refreshUser]);
+  }, [loadLoans, loadActiveLoans, loadCompletedLoans, refreshUser]);
 
   // Дараагийн хуудас
   const loadMore = useCallback(() => {
@@ -117,24 +139,28 @@ export const useLoans = () => {
   const refresh = useCallback(async () => {
     await loadLoans(null, 1, true);
     await loadActiveLoans();
-  }, [loadLoans, loadActiveLoans]);
+    await loadCompletedLoans(); // ✅ НЭМЭХ
+  }, [loadLoans, loadActiveLoans, loadCompletedLoans]);
 
   // Анхны ачаалал
   useEffect(() => {
     if (isAuthenticated) {
       loadLoans(null, 1, true);
       loadActiveLoans();
+      loadCompletedLoans(); // ✅ НЭМЭХ
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loadLoans, loadActiveLoans, loadCompletedLoans]);
 
   return {
     loans,
     activeLoans,
+    completedLoans, // ✅ НЭМЭХ
     isLoading,
     error,
     hasMore,
     loadLoans,
     loadActiveLoans,
+    loadCompletedLoans, // ✅ НЭМЭХ
     requestLoan,
     repayLoan,
     loadMore,

@@ -1,648 +1,486 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  RefreshControl,
-  Alert,
   TouchableOpacity,
+  RefreshControl,
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
-import { useAuth } from '../../hooks/useAuth';
 import { useWallet } from '../../hooks/useWallet';
-import { COLORS, GRADIENTS, SHADOWS, RADIUS, SPACING } from '../../styles/colors';
-import { TEXT_STYLES } from '../../styles/typography';
-import {
-  formatCurrency,
-  formatDate,
-  getTransactionTypeText,
-} from '../../utils/formatters';
-import { APP_CONFIG } from '../../constants/config';
+import { formatCurrency, formatDate } from '../../utils/formatters';
 
 const WalletScreen = () => {
   const router = useRouter();
-  const { wallet } = useAuth();
-  const {
-    transactions,
-    isLoading,
-    refresh,
-    verifyEmongola,
-    loadMore,
-    hasMore,
-  } = useWallet();
+  const { wallet, transactions, refreshWallet, loadTransactions, verifyEmongola, isLoading } = useWallet();
+  
+  const [scaleAnim] = useState(new Animated.Value(1));
 
-  const [verifying, setVerifying] = useState(false);
-  const [selectedTab, setSelectedTab] = useState('all'); // all, income, expense
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const handleVerifyEmongola = async () => {
-    Alert.alert(
-      'E-Mongolia баталгаажуулах',
-      `Та ${formatCurrency(APP_CONFIG.EMONGOLA_VERIFICATION_FEE)} төлж E-Mongolia мэдээллээ баталгаажуулах уу?`,
-      [
-        { text: 'Цуцлах', style: 'cancel' },
-        {
-          text: 'Төлөх',
-          onPress: async () => {
-            try {
-              setVerifying(true);
-              const response = await verifyEmongola();
-              
-              if (response.success) {
-                Alert.alert(
-                  'Амжилттай',
-                  response.data?.wallet?.isEmongolaVerified
-                    ? 'E-Mongolia мэдээлэл амжилттай баталгаажлаа!'
-                    : 'Баталгаажуулалтын төлбөр үүслээ. QPay-р төлнө үү.',
-                  [{ text: 'OK' }]
-                );
-                refresh();
-              }
-            } catch (error) {
-              Alert.alert('Алдаа', error.message || 'Алдаа гарлаа');
-            } finally {
-              setVerifying(false);
-            }
-          },
-        },
-      ]
-    );
+  const loadData = async () => {
+    await Promise.all([refreshWallet(), loadTransactions(1, true)]);
   };
 
-  // Орлого/Зарлагын filter
-  const filteredTransactions = transactions.filter(tx => {
-    if (selectedTab === 'all') return true;
-    
-    const incomeTypes = ['loan_disbursement', 'deposit'];
-    const expenseTypes = ['emongola_verification', 'loan_repayment', 'withdrawal', 'penalty'];
-    
-    if (selectedTab === 'income') {
-      return incomeTypes.includes(tx.type);
+  const handleVerify = async () => {
+    try {
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 0.95,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 3,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      await verifyEmongola();
+    } catch (error) {
+      console.error('Verification failed:', error);
     }
-    if (selectedTab === 'expense') {
-      return expenseTypes.includes(tx.type);
-    }
-    return true;
-  });
-
-  // Нийт орлого/зарлага тооцоолох
-  const calculateTotals = () => {
-    let totalIncome = 0;
-    let totalExpense = 0;
-
-    transactions.forEach(tx => {
-      const incomeTypes = ['loan_disbursement', 'deposit'];
-      if (incomeTypes.includes(tx.type) && tx.status === 'completed') {
-        totalIncome += tx.amount;
-      } else if (tx.status === 'completed') {
-        totalExpense += tx.amount;
-      }
-    });
-
-    return { totalIncome, totalExpense };
   };
 
-  const { totalIncome, totalExpense } = calculateTotals();
+  const getTransactionIcon = (type) => {
+    switch (type) {
+      case 'loan_disbursement':
+        return { emoji: '💰', color: '#6BCF7F' };
+      case 'loan_payment':
+        return { emoji: '💸', color: '#FF6B9D' };
+      case 'verification_fee':
+        return { emoji: '✓', color: '#5DADE2' };
+      default:
+        return { emoji: '💳', color: '#64748B' };
+    }
+  };
 
-  const renderTransaction = (transaction) => {
-    const isIncome = ['loan_disbursement', 'deposit'].includes(transaction.type);
-    const amount = isIncome ? `+${formatCurrency(transaction.amount)}` : `-${formatCurrency(transaction.amount)}`;
-    const amountColor = isIncome ? COLORS.success : COLORS.error;
-
-    return (
-      <TouchableOpacity
-        key={transaction._id}
-        style={styles.transactionCard}
-        onPress={() => router.push(`/transaction-detail/${transaction._id}`)}
-        activeOpacity={0.7}>
-        <View style={styles.transactionLeft}>
-          <View style={[
-            styles.transactionIcon,
-            { backgroundColor: isIncome ? COLORS.successLight : COLORS.errorLight }
-          ]}>
-            <Text style={styles.transactionEmoji}>
-              {isIncome ? '📥' : '📤'}
-            </Text>
-          </View>
-          <View>
-            <Text style={styles.transactionType}>
-              {getTransactionTypeText(transaction.type)}
-            </Text>
-            <Text style={styles.transactionDate}>
-              {formatDate(transaction.createdAt, true)}
-            </Text>
-            {transaction.status === 'pending' && (
-              <View style={styles.pendingBadge}>
-                <Text style={styles.pendingText}>Хүлээгдэж байна</Text>
-              </View>
-            )}
-          </View>
-        </View>
-        <Text style={[styles.transactionAmount, { color: amountColor }]}>
-          {amount}
-        </Text>
-      </TouchableOpacity>
-    );
+  const getTransactionLabel = (type) => {
+    switch (type) {
+      case 'loan_disbursement':
+        return 'Зээл олгох';
+      case 'loan_payment':
+        return 'Зээл төлөлт';
+      case 'verification_fee':
+        return 'Баталгаажуулах';
+      default:
+        return type;
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={refresh}
-            colors={[COLORS.primary]}
-            tintColor={COLORS.primary}
-          />
-        }
-        onScroll={({ nativeEvent }) => {
-          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-          const isCloseToBottom =
-            layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
-          if (isCloseToBottom && hasMore && !isLoading) {
-            loadMore();
-          }
-        }}
-        scrollEventThrottle={400}
-        showsVerticalScrollIndicator={false}>
-        
-        {/* 🎨 HEADER */}
-        <Text style={styles.headerTitle}>Хэтэвч</Text>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#F5F7FA', '#ECF0F3']}
+        style={StyleSheet.absoluteFill}
+      />
 
-        {/* 💰 ҮЛДЭГДЭЛ КАРТ - Premium Gradient */}
-        <LinearGradient
-          colors={wallet?.isEmongolaVerified ? GRADIENTS.primary : GRADIENTS.fire}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.balanceCard, SHADOWS.primaryGlow]}>
-          
-          <Text style={styles.balanceLabel}>Хэтэвчний үлдэгдэл</Text>
-          <Text style={styles.balanceAmount}>
-            {formatCurrency(wallet?.balance || 0)}
-          </Text>
-
-          {wallet?.isEmongolaVerified ? (
-            <>
-              <View style={styles.verifiedBadge}>
-                <Text style={styles.verifiedIcon}>✓</Text>
-                <Text style={styles.verifiedText}>E-Mongolia баталгаажсан</Text>
-              </View>
-              
-              <View style={styles.divider} />
-              
-              <View style={styles.creditRow}>
-                <Text style={styles.creditLabel}>Зээлийн лимит:</Text>
-                <Text style={styles.creditValue}>
-                  {formatCurrency(wallet?.creditLimit || 0)}
-                </Text>
-              </View>
-              <View style={styles.creditRow}>
-                <Text style={styles.creditLabel}>Боломжит:</Text>
-                <Text style={styles.creditValueBold}>
-                  {formatCurrency(wallet?.availableCredit || 0)}
-                </Text>
-              </View>
-            </>
-          ) : (
-            <View style={styles.unverifiedContainer}>
-              <View style={styles.warningBox}>
-                <Text style={styles.warningIcon}>⚠️</Text>
-                <Text style={styles.warningText}>
-                  E-Mongolia мэдээлэл баталгаажаагүй
-                </Text>
-              </View>
-              <TouchableOpacity 
-                style={styles.verifyButton}
-                onPress={handleVerifyEmongola}>
-                <Text style={styles.verifyButtonText}>
-                  Баталгаажуулах ({formatCurrency(APP_CONFIG.EMONGOLA_VERIFICATION_FEE)})
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </LinearGradient>
-
-        {/* ⚡ ХУРДАН ҮЙЛДЛҮҮД */}
-        <View style={styles.quickActions}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/deposit')}>
-            <LinearGradient
-              colors={GRADIENTS.ocean}
-              style={styles.actionGradient}>
-              <Text style={styles.actionIcon}>💰</Text>
-            </LinearGradient>
-            <Text style={styles.actionText}>Цэнэглэх</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/withdraw')}>
-            <LinearGradient
-              colors={GRADIENTS.sunset}
-              style={styles.actionGradient}>
-              <Text style={styles.actionIcon}>💸</Text>
-            </LinearGradient>
-            <Text style={styles.actionText}>Татах</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => router.push('/withdrawal-history')}>
-            <LinearGradient
-              colors={GRADIENTS.forest}
-              style={styles.actionGradient}>
-              <Text style={styles.actionIcon}>📋</Text>
-            </LinearGradient>
-            <Text style={styles.actionText}>Түүх</Text>
-          </TouchableOpacity>
+      <SafeAreaView style={styles.safe}>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Хэтэвч</Text>
         </View>
 
-        {/* 📊 ОРЛОГО/ЗАРЛАГА - Statistics Cards */}
-        {wallet?.isEmongolaVerified && (
-          <View style={styles.statsContainer}>
-            <Card variant="outline" padding="medium" style={styles.statCard}>
-              <View style={styles.statHeader}>
-                <Text style={styles.statIcon}>📈</Text>
-                <Text style={styles.statLabel}>Нийт орлого</Text>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={loadData}
+              tintColor="#FF6B9D"
+            />
+          }
+          showsVerticalScrollIndicator={false}>
+          
+          {/* BALANCE CARD */}
+          <Animated.View style={[styles.balanceWrapper, { transform: [{ scale: scaleAnim }] }]}>
+            <LinearGradient
+              colors={['#4ECDC4', '#38A3A5']}
+              style={styles.balanceCard}>
+              
+              <View style={styles.balanceTop}>
+                <Text style={styles.balanceLabel}>💰 Нийт үлдэгдэл</Text>
+                {wallet?.isEmongolaVerified ? (
+                  <View style={styles.verified}>
+                    <Text style={styles.verifiedText}>✓</Text>
+                  </View>
+                ) : (
+                  <View style={styles.locked}>
+                    <Text style={styles.lockedText}>🔒</Text>
+                  </View>
+                )}
               </View>
-              <Text style={[styles.statValue, { color: COLORS.success }]}>
-                {formatCurrency(totalIncome)}
-              </Text>
-            </Card>
 
-            <Card variant="outline" padding="medium" style={styles.statCard}>
-              <View style={styles.statHeader}>
-                <Text style={styles.statIcon}>📉</Text>
-                <Text style={styles.statLabel}>Нийт зарлага</Text>
+              <Text style={styles.balanceAmount}>
+                {formatCurrency(wallet?.balance || 0)}
+              </Text>
+
+              {wallet?.isEmongolaVerified ? (
+                <View style={styles.creditBox}>
+                  <View style={styles.creditRow}>
+                    <Text style={styles.creditLabel}>Зээлийн лимит</Text>
+                    <Text style={styles.creditValue}>
+                      {formatCurrency(wallet?.creditLimit || 0)}
+                    </Text>
+                  </View>
+                  
+                  <View style={styles.progressBar}>
+                    <View
+                      style={[
+                        styles.progressFill,
+                        {
+                          width: `${((wallet?.creditLimit - wallet?.availableCredit) / wallet?.creditLimit) * 100}%`,
+                        },
+                      ]}
+                    />
+                  </View>
+
+                  <View style={styles.creditRow}>
+                    <Text style={styles.creditLabel}>Боломжит</Text>
+                    <Text style={styles.creditValue}>
+                      {formatCurrency(wallet?.availableCredit || 0)}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.verifyBtn}
+                  onPress={handleVerify}
+                  disabled={isLoading}>
+                  <Text style={styles.verifyText}>
+                    🔓 E-Mongolia баталгаажуулах (3,000₮)
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </LinearGradient>
+          </Animated.View>
+
+          {/* QUICK STATS */}
+          {wallet?.isEmongolaVerified && (
+            <View style={styles.statsContainer}>
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={['#6BCF7F', '#4CAF50']}
+                  style={styles.statGrad}>
+                  <Text style={styles.statIcon}>📈</Text>
+                  <Text style={styles.statLabel}>Зээлийн түүх</Text>
+                  <Text style={styles.statValue}>{wallet?.loanHistory || 0}</Text>
+                </LinearGradient>
               </View>
-              <Text style={[styles.statValue, { color: COLORS.error }]}>
-                {formatCurrency(totalExpense)}
-              </Text>
-            </Card>
-          </View>
-        )}
 
-        {/* 📝 ГҮЙЛГЭЭНИЙ ТҮҮХ - Tab система */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Гүйлгээний түүх</Text>
-            {transactions.length > 0 && (
-              <TouchableOpacity onPress={refresh}>
-                <Text style={styles.refreshText}>🔄</Text>
-              </TouchableOpacity>
+              <View style={styles.statCard}>
+                <LinearGradient
+                  colors={['#FFD93D', '#FF8C42']}
+                  style={styles.statGrad}>
+                  <Text style={styles.statIcon}>⭐</Text>
+                  <Text style={styles.statLabel}>Зээлийн оноо</Text>
+                  <Text style={styles.statValue}>{wallet?.creditScore || 0}</Text>
+                </LinearGradient>
+              </View>
+            </View>
+          )}
+
+          {/* TRANSACTIONS */}
+          <View style={styles.transactionsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>📊 Гүйлгээний түүх</Text>
+            </View>
+
+            {transactions && transactions.length > 0 ? (
+              transactions.map((transaction) => {
+                const icon = getTransactionIcon(transaction.type);
+                const isCredit = transaction.amount > 0;
+
+                return (
+                  <View key={transaction._id} style={styles.transactionCard}>
+                    <View style={styles.transactionLeft}>
+                      <View
+                        style={[
+                          styles.transactionIcon,
+                          { backgroundColor: `${icon.color}15` },
+                        ]}>
+                        <Text style={styles.transactionEmoji}>{icon.emoji}</Text>
+                      </View>
+                      
+                      <View style={styles.transactionInfo}>
+                        <Text style={styles.transactionType}>
+                          {getTransactionLabel(transaction.type)}
+                        </Text>
+                        <Text style={styles.transactionDate}>
+                          {formatDate(transaction.createdAt)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text
+                      style={[
+                        styles.transactionAmount,
+                        { color: isCredit ? '#6BCF7F' : '#FF6B9D' },
+                      ]}>
+                      {isCredit ? '+' : '-'}{formatCurrency(Math.abs(transaction.amount))}
+                    </Text>
+                  </View>
+                );
+              })
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>📊</Text>
+                <Text style={styles.emptyText}>
+                  Гүйлгээний түүх байхгүй байна
+                </Text>
+              </View>
             )}
           </View>
 
-          {/* TAB NAVIGATION */}
-          <View style={styles.tabContainer}>
-            <TouchableOpacity
-              style={[styles.tab, selectedTab === 'all' && styles.tabActive]}
-              onPress={() => setSelectedTab('all')}>
-              <Text style={[styles.tabText, selectedTab === 'all' && styles.tabTextActive]}>
-                Бүгд
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.tab, selectedTab === 'income' && styles.tabActive]}
-              onPress={() => setSelectedTab('income')}>
-              <Text style={[styles.tabText, selectedTab === 'income' && styles.tabTextActive]}>
-                Орлого
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.tab, selectedTab === 'expense' && styles.tabActive]}
-              onPress={() => setSelectedTab('expense')}>
-              <Text style={[styles.tabText, selectedTab === 'expense' && styles.tabTextActive]}>
-                Зарлага
-              </Text>
-            </TouchableOpacity>
-          </View>
-          
-          {/* TRANSACTIONS LIST */}
-          {filteredTransactions.length === 0 ? (
-            <Card padding="large">
-              <Text style={styles.emptyIcon}>📭</Text>
-              <Text style={styles.emptyText}>
-                {selectedTab === 'all' ? 'Гүйлгээ олдсонгүй' :
-                 selectedTab === 'income' ? 'Орлого олдсонгүй' :
-                 'Зарлага олдсонгүй'}
-              </Text>
-            </Card>
-          ) : (
-            <>
-              {filteredTransactions.map(renderTransaction)}
-              {isLoading && hasMore && (
-                <Text style={styles.loadingText}>Ачааллаж байна...</Text>
-              )}
-            </>
-          )}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
+  safe: {
+    flex: 1,
+  },
+
+  // Header
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1A1A2E',
+  },
+
+  // Scroll View
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: SPACING.md,
+    paddingHorizontal: 20,
   },
-  
-  // HEADER
-  headerTitle: {
-    ...TEXT_STYLES.h2,
-    color: COLORS.textPrimary,
-    fontWeight: '700',
-    marginBottom: SPACING.lg,
+
+  // Balance Card
+  balanceWrapper: {
+    marginBottom: 20,
+    borderRadius: 20,
+    shadowColor: '#4ECDC4',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  
-  // BALANCE CARD
   balanceCard: {
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
+    padding: 24,
+    borderRadius: 20,
+  },
+  balanceTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   balanceLabel: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    opacity: 0.9,
-    marginBottom: 8,
+    fontSize: 15,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.9)',
   },
-  balanceAmount: {
-    ...TEXT_STYLES.h1,
-    color: COLORS.textWhite,
-    fontWeight: '700',
-    fontSize: 40,
-    marginBottom: SPACING.md,
-  },
-  verifiedBadge: {
-    flexDirection: 'row',
+  verified: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
-    borderRadius: RADIUS.pill,
-    alignSelf: 'flex-start',
-  },
-  verifiedIcon: {
-    color: COLORS.textWhite,
-    fontSize: 16,
-    marginRight: 4,
   },
   verifiedText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    fontWeight: '600',
+    fontSize: 16,
+    color: '#FFF',
+    fontWeight: '700',
   },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.textWhite,
-    opacity: 0.2,
-    marginVertical: SPACING.md,
+  locked: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockedText: {
+    fontSize: 14,
+  },
+  balanceAmount: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#FFF',
+    marginBottom: 20,
+  },
+  creditBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
   },
   creditRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: SPACING.xs,
   },
   creditLabel: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    opacity: 0.8,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
   },
   creditValue: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    fontWeight: '600',
-  },
-  creditValueBold: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.textWhite,
+    fontSize: 15,
     fontWeight: '700',
+    color: '#FFF',
   },
-  unverifiedContainer: {
-    marginTop: SPACING.md,
+  progressBar: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 3,
+    overflow: 'hidden',
   },
-  warningBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: SPACING.sm,
-    borderRadius: RADIUS.md,
-    marginBottom: SPACING.sm,
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#FFD93D',
+    borderRadius: 3,
   },
-  warningIcon: {
-    fontSize: 20,
-    marginRight: SPACING.xs,
-  },
-  warningText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    fontWeight: '600',
-    flex: 1,
-  },
-  verifyButton: {
-    backgroundColor: COLORS.textWhite,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.md,
+  verifyBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
   },
-  verifyButtonText: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.primary,
+  verifyText: {
+    fontSize: 15,
     fontWeight: '700',
+    color: '#FFF',
   },
-  
-  // QUICK ACTIONS
-  quickActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.lg,
-    gap: SPACING.sm,
-  },
-  actionButton: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  actionGradient: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: RADIUS.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.xs,
-  },
-  actionIcon: {
-    fontSize: 32,
-  },
-  actionText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textPrimary,
-    fontWeight: '600',
-  },
-  
-  // STATISTICS
+
+  // Stats
   statsContainer: {
     flexDirection: 'row',
-    gap: SPACING.sm,
-    marginBottom: SPACING.lg,
+    gap: 12,
+    marginBottom: 24,
   },
   statCard: {
     flex: 1,
-    borderWidth: 2,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#1A1A2E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  statHeader: {
-    flexDirection: 'row',
+  statGrad: {
+    padding: 16,
     alignItems: 'center',
-    marginBottom: SPACING.xs,
   },
   statIcon: {
-    fontSize: 20,
-    marginRight: SPACING.xs,
+    fontSize: 32,
+    marginBottom: 8,
   },
   statLabel: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textSecondary,
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+    marginBottom: 4,
   },
   statValue: {
-    ...TEXT_STYLES.h4,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFF',
   },
-  
-  // SECTION
-  section: {
-    marginBottom: SPACING.lg,
+
+  // Transactions
+  transactionsSection: {
+    marginBottom: 24,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: 16,
   },
   sectionTitle: {
-    ...TEXT_STYLES.h5,
-    color: COLORS.textPrimary,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1A1A2E',
   },
-  refreshText: {
-    fontSize: 20,
-  },
-  
-  // TABS
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: RADIUS.md,
-    padding: 4,
-    marginBottom: SPACING.md,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: SPACING.xs,
-    alignItems: 'center',
-    borderRadius: RADIUS.sm,
-  },
-  tabActive: {
-    backgroundColor: COLORS.white,
-  },
-  tabText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: COLORS.primary,
-  },
-  
-  // TRANSACTION CARD
   transactionCard: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
-    padding: SPACING.md,
-    borderRadius: RADIUS.lg,
-    marginBottom: SPACING.sm,
-    ...SHADOWS.small,
+    shadowColor: '#1A1A2E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   transactionLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
     flex: 1,
   },
   transactionIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    alignItems: 'center',
     justifyContent: 'center',
-    marginRight: SPACING.sm,
+    alignItems: 'center',
   },
   transactionEmoji: {
     fontSize: 24,
   },
+  transactionInfo: {
+    flex: 1,
+  },
   transactionType: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textPrimary,
+    fontSize: 15,
     fontWeight: '600',
+    color: '#1A1A2E',
     marginBottom: 4,
   },
   transactionDate: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textSecondary,
-  },
-  pendingBadge: {
-    backgroundColor: COLORS.warning,
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 2,
-    borderRadius: RADIUS.xs,
-    marginTop: 4,
-    alignSelf: 'flex-start',
-  },
-  pendingText: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textWhite,
-    fontWeight: '600',
-    fontSize: 10,
+    fontSize: 13,
+    color: '#64748B',
   },
   transactionAmount: {
-    ...TEXT_STYLES.h5,
+    fontSize: 16,
     fontWeight: '700',
   },
-  
-  // EMPTY STATE
+
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
   emptyIcon: {
-    fontSize: 50,
-    textAlign: 'center',
-    marginBottom: SPACING.sm,
+    fontSize: 48,
+    marginBottom: 12,
   },
   emptyText: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  loadingText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginTop: SPACING.md,
+    fontSize: 14,
+    color: '#64748B',
   },
 });
 

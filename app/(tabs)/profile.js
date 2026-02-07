@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -6,35 +6,20 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  Modal,
-  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
-import { COLORS, GRADIENTS, SHADOWS, RADIUS, SPACING } from '../../styles/colors';
-import { TEXT_STYLES } from '../../styles/typography';
-import { formatDate } from '../../utils/formatters';
 
 const ProfileScreen = () => {
   const router = useRouter();
-  const { user, logout, changePassword: changePasswordAPI } = useAuth();
-  
-  const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
-  const [passwordLoading, setPasswordLoading] = useState(false);
+  const { user, wallet, logout } = useAuth();
 
   const handleLogout = () => {
     Alert.alert(
-      'Системээс гарах',
-      'Та системээс гарахдаа итгэлтэй байна уу?',
+      '⚠️ Гарах',
+      'Та гарахдаа итгэлтэй байна уу?',
       [
         { text: 'Үгүй', style: 'cancel' },
         {
@@ -49,564 +34,435 @@ const ProfileScreen = () => {
     );
   };
 
-  const handleChangePassword = async () => {
-    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      Alert.alert('Алдаа', 'Бүх талбарыг бөглөнө үү');
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      Alert.alert('Алдаа', 'Шинэ нууц үг 6-аас дээш тэмдэгт байх ёстой');
-      return;
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      Alert.alert('Алдаа', 'Шинэ нууц үг таарахгүй байна');
-      return;
-    }
-
-    try {
-      setPasswordLoading(true);
-      const response = await changePasswordAPI(
-        passwordData.currentPassword,
-        passwordData.newPassword
-      );
-
-      if (response.success) {
-        Alert.alert('Амжилттай', 'Нууц үг амжилттай солигдлоо');
-        setChangePasswordModalVisible(false);
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: '',
-        });
-      }
-    } catch (error) {
-      Alert.alert('Алдаа', error.message || 'Нууц үг солиход алдаа гарлаа');
-    } finally {
-      setPasswordLoading(false);
-    }
-  };
-
-  const getInitials = () => {
-    if (!user?.firstName && !user?.lastName) return '?';
-    const firstInitial = user.firstName?.charAt(0) || '';
-    const lastInitial = user.lastName?.charAt(0) || '';
-    return `${lastInitial}${firstInitial}`.toUpperCase();
-  };
-
-  const menuItems = [
+  const menuSections = [
     {
-      icon: '📝',
-      title: 'Мэдээлэл оруулах',
-      subtitle: user?.profileCompleted ? 'Бүрэн бөглөсөн' : 'Дутуу байна',
-      badge: !user?.profileCompleted,
-      badgeText: 'Бөглөх',
-      onPress: () => router.push('/profile-edit'),
-      gradient: GRADIENTS.primary,
+      title: '💼 Миний мэдээлэл',
+      items: [
+        {
+          icon: '👤',
+          title: 'Хувийн мэдээлэл',
+          subtitle: 'Нэр, утас, имэйл',
+          color: '#FF6B9D',
+          onPress: () => {},
+        },
+        {
+          icon: '✓',
+          title: 'Баталгаажуулалт',
+          subtitle: wallet?.isEmongolaVerified ? 'Баталгаажсан' : 'Баталгаажаагүй',
+          color: wallet?.isEmongolaVerified ? '#6BCF7F' : '#FFD93D',
+          onPress: () => router.push('/(tabs)/wallet'),
+        },
+      ],
     },
     {
-      icon: '🔐',
-      title: 'Нууц үг солих',
-      subtitle: 'Нууц үгээ өөрчлөх',
-      onPress: () => setChangePasswordModalVisible(true),
-      gradient: GRADIENTS.ocean,
+      title: '📊 Зээлийн мэдээлэл',
+      items: [
+        {
+          icon: '💰',
+          title: 'Зээлийн түүх',
+          subtitle: `${wallet?.loanHistory || 0} зээл`,
+          color: '#4ECDC4',
+          onPress: () => router.push('/(tabs)/loans'),
+        },
+        {
+          icon: '⭐',
+          title: 'Зээлийн оноо',
+          subtitle: `${wallet?.creditScore || 0} оноо`,
+          color: '#FFD93D',
+          onPress: () => {},
+        },
+      ],
     },
     {
-      icon: '📞',
-      title: 'Холбоо барих',
-      subtitle: 'Тусламж хэрэгтэй юу?',
-      onPress: () => Alert.alert('Холбоо барих', 'Утас: 7777-7777'),
-      gradient: GRADIENTS.forest,
-    },
-    {
-      icon: 'ℹ️',
-      title: 'Апп-ын тухай',
-      subtitle: 'Хувилбар 1.0.0',
-      onPress: () => Alert.alert('MoneyApp', 'Хувилбар 1.0.0\n© 2026'),
-      gradient: GRADIENTS.sunset,
+      title: '⚙️ Тохиргоо',
+      items: [
+        {
+          icon: '🔔',
+          title: 'Мэдэгдэл',
+          subtitle: 'Мэдэгдлийн тохиргоо',
+          color: '#5DADE2',
+          onPress: () => {},
+        },
+        {
+          icon: '🔒',
+          title: 'Нууцлал',
+          subtitle: 'Нууцлалын бодлого',
+          color: '#BB6BD9',
+          onPress: () => {},
+        },
+        {
+          icon: '❓',
+          title: 'Тусламж',
+          subtitle: 'Түгээмэл асуулт хариулт',
+          color: '#FF8C42',
+          onPress: () => {},
+        },
+      ],
     },
   ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}>
-        
-        {/* 🎨 PROFILE HEADER - Gradient with Glassmorphism */}
-        <LinearGradient
-          colors={GRADIENTS.primaryVertical}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.headerGradient}>
-          
-          {/* Avatar with glass effect */}
-          <View style={styles.avatarContainer}>
-            <LinearGradient
-              colors={['rgba(255,255,255,0.3)', 'rgba(255,255,255,0.1)']}
-              style={styles.avatarGlass}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{getInitials()}</Text>
-              </View>
-              {user?.profileCompleted && (
-                <View style={styles.verifiedBadge}>
-                  <Text style={styles.verifiedIcon}>✓</Text>
-                </View>
-              )}
-            </LinearGradient>
-          </View>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#F5F7FA', '#ECF0F3']}
+        style={StyleSheet.absoluteFill}
+      />
 
-          {/* User Info */}
-          <Text style={styles.userName}>
-            {user?.lastName} {user?.firstName}
-          </Text>
+      <SafeAreaView style={styles.safe}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}>
           
-          {/* Status Badge */}
-          <View style={styles.statusBadgeContainer}>
+          {/* PROFILE HEADER */}
+          <View style={styles.profileHeader}>
             <LinearGradient
-              colors={
-                user?.profileCompleted
-                  ? ['rgba(16,185,129,0.8)', 'rgba(5,150,105,0.8)']
-                  : ['rgba(245,158,11,0.8)', 'rgba(217,119,6,0.8)']
-              }
-              style={styles.statusBadge}>
-              <Text style={styles.statusBadgeText}>
-                {user?.profileCompleted ? '✅ Бүрэн бөглөсөн' : '⚠️ Дутуу байна'}
+              colors={['#FF6B9D', '#C44569']}
+              style={styles.avatarLarge}>
+              <Text style={styles.avatarLargeText}>
+                {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
               </Text>
             </LinearGradient>
-          </View>
-        </LinearGradient>
 
-        {/* 📊 USER INFO CARDS - Glass cards */}
-        <View style={styles.infoCardsContainer}>
-          <Card variant="glass" padding="medium" style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <View style={styles.iconContainer}>
+            <Text style={styles.userName}>
+              {user?.lastName} {user?.firstName}
+            </Text>
+            
+            <View style={styles.userInfo}>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoIcon}>📧</Text>
+                <Text style={styles.infoText}>{user?.email}</Text>
+              </View>
+              <View style={styles.infoItem}>
                 <Text style={styles.infoIcon}>📱</Text>
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Утасны дугаар</Text>
-                <Text style={styles.infoValue}>{user?.phoneNumber}</Text>
+                <Text style={styles.infoText}>{user?.phone}</Text>
               </View>
             </View>
-          </Card>
 
-          <Card variant="glass" padding="medium" style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <View style={styles.iconContainer}>
-                <Text style={styles.infoIcon}>🆔</Text>
+            {wallet?.isEmongolaVerified && (
+              <View style={styles.verifiedBadge}>
+                <Text style={styles.verifiedIcon}>✓</Text>
+                <Text style={styles.verifiedLabel}>Баталгаажсан</Text>
               </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Регистр</Text>
-                <Text style={styles.infoValue}>
-                  {user?.registerNumber || 'Бөглөөгүй'}
-                </Text>
-              </View>
-            </View>
-          </Card>
-
-          {user?.email && (
-            <Card variant="glass" padding="medium" style={styles.infoCard}>
-              <View style={styles.infoRow}>
-                <View style={styles.iconContainer}>
-                  <Text style={styles.infoIcon}>✉️</Text>
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>И-мэйл</Text>
-                  <Text style={styles.infoValue}>{user.email}</Text>
-                </View>
-              </View>
-            </Card>
-          )}
-
-          {user?.occupation && (
-            <Card variant="glass" padding="medium" style={styles.infoCard}>
-              <View style={styles.infoRow}>
-                <View style={styles.iconContainer}>
-                  <Text style={styles.infoIcon}>💼</Text>
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Ажил мэргэжил</Text>
-                  <Text style={styles.infoValue}>{user.occupation}</Text>
-                </View>
-              </View>
-            </Card>
-          )}
-
-          {user?.monthlyIncome && (
-            <Card variant="glass" padding="medium" style={styles.infoCard}>
-              <View style={styles.infoRow}>
-                <View style={styles.iconContainer}>
-                  <Text style={styles.infoIcon}>💰</Text>
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Сарын орлого</Text>
-                  <Text style={styles.infoValue}>{user.monthlyIncome}</Text>
-                </View>
-              </View>
-            </Card>
-          )}
-
-          <Card variant="glass" padding="medium" style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <View style={styles.iconContainer}>
-                <Text style={styles.infoIcon}>📅</Text>
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Бүртгүүлсэн огноо</Text>
-                <Text style={styles.infoValue}>
-                  {formatDate(user?.createdAt)}
-                </Text>
-              </View>
-            </View>
-          </Card>
-        </View>
-
-        {/* 🎯 MENU ITEMS - Premium cards */}
-        <View style={styles.menuSection}>
-          {menuItems.map((item, index) => (
-            <TouchableOpacity
-              key={index}
-              onPress={item.onPress}
-              activeOpacity={0.85}
-              style={styles.menuItemContainer}>
-              <LinearGradient
-                colors={item.gradient}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.menuItemGradient}>
-                
-                <View style={styles.menuItemContent}>
-                  <View style={styles.menuItemLeft}>
-                    <View style={styles.menuIconContainer}>
-                      <Text style={styles.menuIcon}>{item.icon}</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.menuTitle}>{item.title}</Text>
-                      <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-                    </View>
-                  </View>
-                  
-                  {item.badge ? (
-                    <View style={styles.menuBadge}>
-                      <Text style={styles.menuBadgeText}>{item.badgeText}</Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.menuArrow}>›</Text>
-                  )}
-                </View>
-              </LinearGradient>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* 🚪 LOGOUT BUTTON */}
-        <Button
-          title="Системээс гарах"
-          variant="outline"
-          onPress={handleLogout}
-          style={styles.logoutButton}
-        />
-
-        {/* Bottom spacing */}
-        <View style={{ height: SPACING.xl }} />
-      </ScrollView>
-
-      {/* 🔐 CHANGE PASSWORD MODAL */}
-      <Modal
-        visible={changePasswordModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setChangePasswordModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Нууц үг солих</Text>
-              <TouchableOpacity
-                onPress={() => setChangePasswordModalVisible(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TextInput
-              style={styles.input}
-              placeholder="Одоогийн нууц үг"
-              placeholderTextColor={COLORS.textTertiary}
-              value={passwordData.currentPassword}
-              onChangeText={(text) =>
-                setPasswordData({ ...passwordData, currentPassword: text })
-              }
-              secureTextEntry
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Шинэ нууц үг (6+ тэмдэгт)"
-              placeholderTextColor={COLORS.textTertiary}
-              value={passwordData.newPassword}
-              onChangeText={(text) =>
-                setPasswordData({ ...passwordData, newPassword: text })
-              }
-              secureTextEntry
-            />
-
-            <TextInput
-              style={styles.input}
-              placeholder="Шинэ нууц үг дахин"
-              placeholderTextColor={COLORS.textTertiary}
-              value={passwordData.confirmPassword}
-              onChangeText={(text) =>
-                setPasswordData({ ...passwordData, confirmPassword: text })
-              }
-              secureTextEntry
-            />
-
-            <Button
-              title="Хадгалах"
-              variant="gradient"
-              onPress={handleChangePassword}
-              loading={passwordLoading}
-              fullWidth
-            />
+            )}
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+
+          {/* STATS CARDS */}
+          <View style={styles.statsGrid}>
+            <View style={styles.statCardSmall}>
+              <LinearGradient
+                colors={['#4ECDC4', '#38A3A5']}
+                style={styles.statCardGrad}>
+                <Text style={styles.statCardIcon}>💳</Text>
+                <Text style={styles.statCardValue}>
+                  {wallet?.loanHistory || 0}
+                </Text>
+                <Text style={styles.statCardLabel}>Нийт зээл</Text>
+              </LinearGradient>
+            </View>
+
+            <View style={styles.statCardSmall}>
+              <LinearGradient
+                colors={['#FFD93D', '#FF8C42']}
+                style={styles.statCardGrad}>
+                <Text style={styles.statCardIcon}>⭐</Text>
+                <Text style={styles.statCardValue}>
+                  {wallet?.creditScore || 0}
+                </Text>
+                <Text style={styles.statCardLabel}>Зээлийн оноо</Text>
+              </LinearGradient>
+            </View>
+
+            <View style={styles.statCardSmall}>
+              <LinearGradient
+                colors={['#6BCF7F', '#4CAF50']}
+                style={styles.statCardGrad}>
+                <Text style={styles.statCardIcon}>💰</Text>
+                <Text style={styles.statCardValue}>
+                  {wallet?.creditLimit || 0}₮
+                </Text>
+                <Text style={styles.statCardLabel}>Зээлийн лимит</Text>
+              </LinearGradient>
+            </View>
+          </View>
+
+          {/* MENU SECTIONS */}
+          {menuSections.map((section, sectionIndex) => (
+            <View key={sectionIndex} style={styles.menuSection}>
+              <Text style={styles.sectionTitle}>{section.title}</Text>
+              
+              <View style={styles.menuCard}>
+                {section.items.map((item, itemIndex) => (
+                  <TouchableOpacity
+                    key={itemIndex}
+                    style={[
+                      styles.menuItem,
+                      itemIndex !== section.items.length - 1 && styles.menuItemBorder,
+                    ]}
+                    onPress={item.onPress}
+                    activeOpacity={0.7}>
+                    
+                    <View style={styles.menuItemLeft}>
+                      <View
+                        style={[
+                          styles.menuIcon,
+                          { backgroundColor: `${item.color}15` },
+                        ]}>
+                        <Text style={styles.menuIconText}>{item.icon}</Text>
+                      </View>
+                      
+                      <View style={styles.menuTextContainer}>
+                        <Text style={styles.menuTitle}>{item.title}</Text>
+                        <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.menuArrow}>→</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          ))}
+
+          {/* LOGOUT BUTTON */}
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            activeOpacity={0.8}>
+            <LinearGradient
+              colors={['#FF6B6B', '#E74C3C']}
+              style={styles.logoutGrad}>
+              <Text style={styles.logoutIcon}>🚪</Text>
+              <Text style={styles.logoutText}>Гарах</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* APP VERSION */}
+          <Text style={styles.version}>MoneyApp v1.0.0</Text>
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+  },
+  safe: {
+    flex: 1,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: SPACING.xl,
+    paddingHorizontal: 20,
+    paddingTop: 20,
   },
-  
-  // HEADER GRADIENT
-  headerGradient: {
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.xxl,
-    paddingHorizontal: SPACING.md,
+
+  // Profile Header
+  profileHeader: {
     alignItems: 'center',
-    marginBottom: -SPACING.xl,
+    paddingVertical: 24,
+    marginBottom: 24,
   },
-  avatarContainer: {
-    marginBottom: SPACING.md,
-  },
-  avatarGlass: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.3)',
-    ...SHADOWS.large,
-  },
-  avatar: {
+  avatarLarge: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+    shadowColor: '#FF6B9D',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
-  avatarText: {
-    ...TEXT_STYLES.display2,
-    color: COLORS.primary,
+  avatarLargeText: {
+    fontSize: 40,
     fontWeight: '700',
-  },
-  verifiedBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.success,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: COLORS.white,
-  },
-  verifiedIcon: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: '#FFF',
   },
   userName: {
-    ...TEXT_STYLES.h2,
-    color: COLORS.textWhite,
-    fontWeight: '700',
-    marginBottom: SPACING.xs,
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#1A1A2E',
+    marginBottom: 12,
   },
-  statusBadgeContainer: {
-    marginTop: SPACING.xs,
+  userInfo: {
+    alignItems: 'center',
+    gap: 8,
   },
-  statusBadge: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderRadius: RADIUS.pill,
-  },
-  statusBadgeText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    fontWeight: '600',
-  },
-  
-  // INFO CARDS
-  infoCardsContainer: {
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  infoCard: {
-    marginBottom: SPACING.sm,
-  },
-  infoRow: {
+  infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.sm,
+    gap: 8,
   },
   infoIcon: {
-    fontSize: 24,
+    fontSize: 14,
   },
-  infoContent: {
+  infoText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginTop: 16,
+    gap: 6,
+  },
+  verifiedIcon: {
+    fontSize: 16,
+    color: '#6BCF7F',
+  },
+  verifiedLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6BCF7F',
+  },
+
+  // Stats Grid
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  statCardSmall: {
     flex: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#1A1A2E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  infoLabel: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textSecondary,
+  statCardGrad: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  statCardIcon: {
+    fontSize: 28,
+    marginBottom: 8,
+  },
+  statCardValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFF',
     marginBottom: 4,
   },
-  infoValue: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.textPrimary,
-    fontWeight: '600',
+  statCardLabel: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '500',
+    textAlign: 'center',
   },
-  
-  // MENU SECTION
+
+  // Menu Sections
   menuSection: {
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.lg,
+    marginBottom: 24,
   },
-  menuItemContainer: {
-    marginBottom: SPACING.sm,
-    borderRadius: RADIUS.lg,
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A2E',
+    marginBottom: 12,
+  },
+  menuCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
     overflow: 'hidden',
-    ...SHADOWS.small,
+    shadowColor: '#1A1A2E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  menuItemGradient: {
-    padding: SPACING.md,
-  },
-  menuItemContent: {
+  menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    padding: 16,
+  },
+  menuItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
     flex: 1,
   },
-  menuIconContainer: {
+  menuIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
     justifyContent: 'center',
-    marginRight: SPACING.sm,
+    alignItems: 'center',
   },
-  menuIcon: {
+  menuIconText: {
     fontSize: 24,
   },
+  menuTextContainer: {
+    flex: 1,
+  },
   menuTitle: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.textWhite,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A1A2E',
     marginBottom: 4,
   },
   menuSubtitle: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textWhite,
-    opacity: 0.9,
-  },
-  menuBadge: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-    borderRadius: RADIUS.xs,
-  },
-  menuBadgeText: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.primary,
-    fontWeight: '700',
+    fontSize: 13,
+    color: '#64748B',
   },
   menuArrow: {
-    ...TEXT_STYLES.h3,
-    color: COLORS.textWhite,
-    fontWeight: '300',
+    fontSize: 18,
+    color: '#CBD5E1',
   },
-  
-  // LOGOUT BUTTON
+
+  // Logout Button
   logoutButton: {
-    marginHorizontal: SPACING.md,
-    borderColor: COLORS.error,
-    borderWidth: 2,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 16,
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  
-  // MODAL
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: COLORS.overlay,
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    paddingBottom: SPACING.xl,
-  },
-  modalHeader: {
+  logoutGrad: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SPACING.lg,
+    paddingVertical: 16,
+    gap: 10,
   },
-  modalTitle: {
-    ...TEXT_STYLES.h4,
-    color: COLORS.textPrimary,
+  logoutIcon: {
+    fontSize: 20,
+  },
+  logoutText: {
+    fontSize: 16,
     fontWeight: '700',
+    color: '#FFF',
   },
-  modalClose: {
-    ...TEXT_STYLES.h4,
-    color: COLORS.textSecondary,
-    fontWeight: '300',
-  },
-  input: {
-    ...TEXT_STYLES.body,
-    backgroundColor: COLORS.backgroundSecondary,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    borderWidth: 2,
-    borderColor: COLORS.border,
+
+  // Version
+  version: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#94A3B8',
+    marginBottom: 8,
   },
 });
 

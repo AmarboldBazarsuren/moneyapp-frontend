@@ -1,23 +1,24 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  RefreshControl,
   TouchableOpacity,
+  Animated,
+  Dimensions,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
 import { useAuth } from '../../hooks/useAuth';
 import { useWallet } from '../../hooks/useWallet';
 import { useLoans } from '../../hooks/useLoans';
-import { COLORS, GRADIENTS, SHADOWS, RADIUS, SPACING } from '../../styles/colors';
-import { TEXT_STYLES } from '../../styles/typography';
 import { formatCurrency } from '../../utils/formatters';
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = width - 40;
 
 const HomeScreen = () => {
   const router = useRouter();
@@ -25,502 +26,523 @@ const HomeScreen = () => {
   const { refreshWallet, isLoading: walletLoading } = useWallet();
   const { activeLoans, loadActiveLoans, isLoading: loansLoading } = useLoans();
 
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(30));
   const isLoading = walletLoading || loansLoading;
 
   useEffect(() => {
     loadData();
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   const loadData = async () => {
-    await Promise.all([
-      refreshWallet(),
-      loadActiveLoans(),
-    ]);
+    await Promise.all([refreshWallet(), loadActiveLoans()]);
   };
-
-  const handleRefresh = async () => {
-    await loadData();
-  };
-
-  // Гол action-ууд
-  const quickActions = [
-    {
-      icon: '💰',
-      title: 'Зээл авах',
-      subtitle: 'Хялбар зээл',
-      color: GRADIENTS.primary,
-      onPress: () => router.push('/loan-request'),
-    },
-    {
-      icon: '📊',
-      title: 'Миний зээл',
-      subtitle: `${activeLoans?.length || 0} идэвхтэй`,
-      color: GRADIENTS.ocean,
-      onPress: () => router.push('/(tabs)/loans'),
-    },
-    {
-      icon: '💳',
-      title: 'Хэтэвч',
-      subtitle: 'Үлдэгдэл',
-      color: GRADIENTS.sunset,
-      onPress: () => router.push('/(tabs)/wallet'),
-    },
-    {
-      icon: '👤',
-      title: 'Профайл',
-      subtitle: 'Тохиргоо',
-      color: GRADIENTS.forest,
-      onPress: () => router.push('/(tabs)/profile'),
-    },
-  ];
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={handleRefresh}
-            colors={[COLORS.primary]}
-            tintColor={COLORS.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}>
-        
-        {/* 🎨 ШИНЭ HEADER - Gradient background */}
-        <LinearGradient
-          colors={GRADIENTS.primaryVertical}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.header}>
-          <View style={styles.headerContent}>
-            <View>
-              <Text style={styles.greeting}>Сайн байна уу,</Text>
-              <Text style={styles.userName}>
-                {user?.lastName} {user?.firstName}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.notificationButton}
-              onPress={() => {}}>
-              <View style={styles.notificationDot} />
-              <Text style={styles.notificationIcon}>🔔</Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#F5F7FA', '#ECF0F3']}
+        style={StyleSheet.absoluteFill}
+      />
 
-        {/* 💰 ХЭТЭВЧНИЙ КАРТ - Glassmorphism */}
-        <View style={styles.walletCardContainer}>
-          <LinearGradient
-            colors={wallet?.isEmongolaVerified ? GRADIENTS.primary : GRADIENTS.fire}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.walletCard, SHADOWS.primaryGlow]}>
-            
-            <View style={styles.walletHeader}>
+      <SafeAreaView style={styles.safe}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={loadData}
+              tintColor="#FF6B9D"
+            />
+          }>
+          
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            }}>
+
+            {/* 🎯 MINIMAL HEADER */}
+            <View style={styles.header}>
               <View>
-                <Text style={styles.walletLabel}>Хэтэвчний үлдэгдэл</Text>
-                <Text style={styles.walletBalance}>
-                  {formatCurrency(wallet?.balance || 0)}
-                </Text>
+                <Text style={styles.hello}>Сайн байна уу</Text>
+                <Text style={styles.name}>{user?.firstName} 🎉</Text>
               </View>
-              
-              {!wallet?.isEmongolaVerified && (
-                <View style={styles.unverifiedBadge}>
-                  <Text style={styles.unverifiedIcon}>⚠️</Text>
-                </View>
-              )}
+              <TouchableOpacity style={styles.avatar}>
+                <LinearGradient
+                  colors={['#FF6B9D', '#C44569']}
+                  style={styles.avatarGrad}>
+                  <Text style={styles.avatarText}>
+                    {user?.firstName?.charAt(0)}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
 
-            {wallet?.isEmongolaVerified ? (
-              <View style={styles.creditSection}>
-                <View style={styles.creditRow}>
-                  <Text style={styles.creditLabel}>Зээлийн лимит</Text>
-                  <Text style={styles.creditValue}>
-                    {formatCurrency(wallet?.creditLimit || 0)}
-                  </Text>
-                </View>
-                <View style={styles.creditProgressBar}>
-                  <View 
-                    style={[
-                      styles.creditProgressFill,
-                      { 
-                        width: `${((wallet?.creditLimit - wallet?.availableCredit) / wallet?.creditLimit) * 100}%` 
-                      }
-                    ]} 
-                  />
-                </View>
-                <Text style={styles.creditAvailable}>
-                  Боломжит: {formatCurrency(wallet?.availableCredit || 0)}
-                </Text>
-              </View>
-            ) : (
-              <TouchableOpacity 
-                style={styles.verifyButton}
-                onPress={() => router.push('/(tabs)/wallet')}>
-                <Text style={styles.verifyButtonText}>
-                  🔓 Баталгаажуулах (3,000₮)
-                </Text>
-              </TouchableOpacity>
-            )}
-          </LinearGradient>
-        </View>
-
-        {/* ⚡ ХУРДАН ҮЙЛДЛҮҮД - Modern Grid */}
-        <View style={styles.quickActionsGrid}>
-          {quickActions.map((action, index) => (
+            {/* 💳 FLOATING BALANCE CARD */}
             <TouchableOpacity
-              key={index}
-              style={styles.actionCard}
-              onPress={action.onPress}
-              activeOpacity={0.85}>
+              activeOpacity={0.9}
+              onPress={() => router.push('/(tabs)/wallet')}
+              style={styles.balanceWrapper}>
               <LinearGradient
-                colors={action.color}
+                colors={['#FF6B9D', '#C44569']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={[styles.actionCardGradient, SHADOWS.small]}>
-                <Text style={styles.actionIcon}>{action.icon}</Text>
-                <Text style={styles.actionTitle}>{action.title}</Text>
-                <Text style={styles.actionSubtitle}>{action.subtitle}</Text>
+                style={styles.balanceCard}>
+                
+                <View style={styles.balanceTop}>
+                  <Text style={styles.balanceLabel}>💰 Миний үлдэгдэл</Text>
+                  {wallet?.isEmongolaVerified ? (
+                    <View style={styles.verified}>
+                      <Text style={styles.verifiedText}>✓</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.locked}>
+                      <Text style={styles.lockedText}>🔒</Text>
+                    </View>
+                  )}
+                </View>
+
+                <Text style={styles.balanceAmount}>
+                  {formatCurrency(wallet?.balance || 0)}
+                </Text>
+
+                {wallet?.isEmongolaVerified ? (
+                  <View style={styles.creditBox}>
+                    <View style={styles.creditRow}>
+                      <Text style={styles.creditLabel}>Лимит</Text>
+                      <Text style={styles.creditValue}>
+                        {formatCurrency(wallet?.creditLimit || 0)}
+                      </Text>
+                    </View>
+                    <View style={styles.progressBar}>
+                      <View
+                        style={[
+                          styles.progressFill,
+                          {
+                            width: `${((wallet?.creditLimit - wallet?.availableCredit) / wallet?.creditLimit) * 100}%`,
+                          },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.availableText}>
+                      Боломжит: {formatCurrency(wallet?.availableCredit || 0)}
+                    </Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.verifyBtn}
+                    onPress={() => router.push('/(tabs)/wallet')}>
+                    <Text style={styles.verifyText}>
+                      🔓 Баталгаажуулах (3,000₮)
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </LinearGradient>
             </TouchableOpacity>
-          ))}
-        </View>
 
-        {/* 📊 ИДЭВХТЭЙ ЗЭЭЛҮҮД */}
-        {activeLoans && activeLoans.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Идэвхтэй зээлүүд</Text>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/loans')}>
-                <Text style={styles.seeAllText}>Бүгд →</Text>
+            {/* ⚡ QUICK ACTIONS - Modern Pills */}
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={styles.actionPill}
+                onPress={() => router.push('/loan-request')}>
+                <LinearGradient
+                  colors={['#FFD93D', '#FF8C42']}
+                  style={styles.actionGrad}>
+                  <Text style={styles.actionIcon}>⚡</Text>
+                  <Text style={styles.actionText}>Зээл авах</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionPill}
+                onPress={() => router.push('/(tabs)/loans')}>
+                <LinearGradient
+                  colors={['#4ECDC4', '#38A3A5']}
+                  style={styles.actionGrad}>
+                  <Text style={styles.actionIcon}>💎</Text>
+                  <Text style={styles.actionText}>Миний зээл</Text>
+                  {activeLoans?.length > 0 && (
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{activeLoans.length}</Text>
+                    </View>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionPill}
+                onPress={() => router.push('/(tabs)/profile')}>
+                <LinearGradient
+                  colors={['#BB6BD9', '#9B59B6']}
+                  style={styles.actionGrad}>
+                  <Text style={styles.actionIcon}>🚀</Text>
+                  <Text style={styles.actionText}>Профайл</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
 
-            {activeLoans.slice(0, 2).map((loan) => (
-              <Card
-                key={loan._id}
-                variant="glass"
-                onPress={() => router.push(`/loan-detail/${loan._id}`)}
-                padding="medium">
-                <View style={styles.loanCard}>
-                  <View style={styles.loanCardLeft}>
-                    <View style={styles.loanIconContainer}>
-                      <Text style={styles.loanIcon}>💳</Text>
-                    </View>
-                    <View>
-                      <Text style={styles.loanNumber}>{loan.loanNumber}</Text>
-                      <Text style={styles.loanAmount}>
-                        {formatCurrency(loan.remainingAmount)}
-                      </Text>
-                    </View>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.payButton}
-                    onPress={() => router.push(`/loan-detail/${loan._id}`)}>
-                    <Text style={styles.payButtonText}>Төлөх</Text>
+            {/* 📊 ACTIVE LOANS */}
+            {activeLoans && activeLoans.length > 0 && (
+              <View style={styles.loansSection}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>⚡ Идэвхтэй зээлүүд</Text>
+                  <TouchableOpacity onPress={() => router.push('/(tabs)/loans')}>
+                    <Text style={styles.viewAll}>Бүгд →</Text>
                   </TouchableOpacity>
                 </View>
-              </Card>
-            ))}
-          </View>
-        )}
 
-        {/* 💡 ЗӨВЛӨГӨӨ - Info Card */}
-        <Card variant="outline" padding="medium" style={styles.tipCard}>
-          <View style={styles.tipContent}>
-            <Text style={styles.tipIcon}>💡</Text>
-            <View style={styles.tipTextContainer}>
-              <Text style={styles.tipTitle}>Зөвлөгөө</Text>
-              <Text style={styles.tipText}>
-                Зээлээ цагтаа төлж, зээлийн лимитээ нэмэгдүүлээрэй!
-              </Text>
+                {activeLoans.slice(0, 2).map((loan) => (
+                  <TouchableOpacity
+                    key={loan._id}
+                    style={styles.loanCard}
+                    activeOpacity={0.8}
+                    onPress={() => router.push(`/loan-detail/${loan._id}`)}>
+                    <View style={styles.loanLeft}>
+                      <View style={styles.loanIcon}>
+                        <Text style={styles.loanEmoji}>💰</Text>
+                      </View>
+                      <View>
+                        <Text style={styles.loanNum}>{loan.loanNumber}</Text>
+                        <Text style={styles.loanAmt}>
+                          {formatCurrency(loan.remainingAmount)}
+                        </Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity style={styles.payBtn}>
+                      <Text style={styles.payText}>Төлөх →</Text>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* 💡 TIP CARD */}
+            <View style={styles.tipCard}>
+              <Text style={styles.tipIcon}>💡</Text>
+              <View style={styles.tipContent}>
+                <Text style={styles.tipTitle}>Pro Tip</Text>
+                <Text style={styles.tipText}>
+                  Зээлээ цагтаа төлж, лимитээ нэмэгдүүл!
+                </Text>
+              </View>
             </View>
-          </View>
-        </Card>
 
-        {/* Bottom spacing */}
-        <View style={{ height: SPACING.xl }} />
-      </ScrollView>
-    </SafeAreaView>
+            <View style={{ height: 40 }} />
+          </Animated.View>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
-  scrollView: {
+  safe: {
     flex: 1,
   },
-  scrollContent: {
-    paddingBottom: SPACING.lg,
-  },
   
-  // 🎨 HEADER - Gradient
+  // Header
   header: {
-    paddingTop: SPACING.lg,
-    paddingBottom: SPACING.xl + SPACING.lg,
-    paddingHorizontal: SPACING.md,
-    marginBottom: -SPACING.xl,
-  },
-  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 24,
   },
-  greeting: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    opacity: 0.9,
-    marginBottom: 4,
+  hello: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
   },
-  userName: {
-    ...TEXT_STYLES.h3,
-    color: COLORS.textWhite,
-    fontWeight: '700',
+  name: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1A1A2E',
+    marginTop: 4,
   },
-  notificationButton: {
-    position: 'relative',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backdropFilter: 'blur(10px)',
-  },
-  notificationDot: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.error,
-    borderWidth: 2,
-    borderColor: COLORS.white,
-  },
-  notificationIcon: {
-    fontSize: 24,
-  },
-  
-  // 💰 WALLET CARD
-  walletCardContainer: {
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  walletCard: {
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     overflow: 'hidden',
   },
-  walletHeader: {
+  avatarGrad: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+
+  // Balance Card
+  balanceWrapper: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 20,
+    shadowColor: '#FF6B9D',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  balanceCard: {
+    padding: 24,
+    borderRadius: 20,
+  },
+  balanceTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.md,
-  },
-  walletLabel: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    opacity: 0.9,
-    marginBottom: 8,
-  },
-  walletBalance: {
-    ...TEXT_STYLES.h1,
-    color: COLORS.textWhite,
-    fontWeight: '700',
-    fontSize: 36,
-  },
-  unverifiedBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
+    marginBottom: 16,
+  },
+  balanceLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.9)',
+  },
+  verified: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  unverifiedIcon: {
-    fontSize: 24,
+  verifiedText: {
+    fontSize: 16,
+    color: '#FFF',
   },
-  creditSection: {
-    marginTop: SPACING.md,
+  locked: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lockedText: {
+    fontSize: 14,
+  },
+  balanceAmount: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#FFF',
+    marginBottom: 20,
+  },
+  creditBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    padding: 16,
   },
   creditRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: SPACING.xs,
+    marginBottom: 12,
   },
   creditLabel: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    opacity: 0.8,
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
   },
   creditValue: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
   },
-  creditProgressBar: {
+  progressBar: {
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
     borderRadius: 3,
-    marginVertical: SPACING.xs,
+    marginBottom: 12,
     overflow: 'hidden',
   },
-  creditProgressFill: {
+  progressFill: {
     height: '100%',
-    backgroundColor: COLORS.textWhite,
+    backgroundColor: '#FFD93D',
     borderRadius: 3,
   },
-  creditAvailable: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.textWhite,
-    fontWeight: '700',
-    marginTop: 4,
+  availableText: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontWeight: '600',
   },
-  verifyButton: {
-    backgroundColor: COLORS.textWhite,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.md,
+  verifyBtn: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: SPACING.md,
   },
-  verifyButtonText: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.primary,
+  verifyText: {
+    fontSize: 15,
     fontWeight: '700',
+    color: '#FFF',
   },
-  
-  // ⚡ QUICK ACTIONS
-  quickActionsGrid: {
+
+  // Quick Actions
+  actions: {
+    paddingHorizontal: 20,
+    gap: 12,
+    marginBottom: 24,
+  },
+  actionPill: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#1A1A2E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  actionGrad: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: SPACING.md,
-    gap: SPACING.sm,
-    marginBottom: SPACING.lg,
-  },
-  actionCard: {
-    width: `${(100 - 2) / 2}%`,
-  },
-  actionCardGradient: {
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    aspectRatio: 1,
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 18,
+    gap: 12,
   },
   actionIcon: {
-    fontSize: 32,
+    fontSize: 24,
   },
-  actionTitle: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.textWhite,
+  actionText: {
+    fontSize: 16,
     fontWeight: '700',
-    marginTop: SPACING.xs,
+    color: '#FFF',
+    flex: 1,
   },
-  actionSubtitle: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textWhite,
-    opacity: 0.9,
+  badge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  
-  // 📊 SECTION
-  section: {
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.lg,
+  badgeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+
+  // Loans Section
+  loansSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: 16,
   },
   sectionTitle: {
-    ...TEXT_STYLES.h5,
-    color: COLORS.textPrimary,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1A1A2E',
   },
-  seeAllText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.primary,
+  viewAll: {
+    fontSize: 14,
     fontWeight: '600',
+    color: '#FF6B9D',
   },
-  
-  // 💳 LOAN CARD
   loanCard: {
+    backgroundColor: '#FFF',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    shadowColor: '#1A1A2E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  loanCardLeft: {
+  loanLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    gap: 12,
   },
-  loanIconContainer: {
+  loanIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: COLORS.primaryLight,
-    alignItems: 'center',
+    backgroundColor: '#FFF5F7',
     justifyContent: 'center',
-    marginRight: SPACING.sm,
+    alignItems: 'center',
   },
-  loanIcon: {
+  loanEmoji: {
     fontSize: 24,
   },
-  loanNumber: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textSecondary,
-    marginBottom: 4,
+  loanNum: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
   },
-  loanAmount: {
-    ...TEXT_STYLES.h5,
-    color: COLORS.textPrimary,
+  loanAmt: {
+    fontSize: 16,
     fontWeight: '700',
+    color: '#1A1A2E',
+    marginTop: 2,
   },
-  payButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderRadius: RADIUS.sm,
+  payBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#FFF5F7',
+    borderRadius: 12,
   },
-  payButtonText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    fontWeight: '600',
+  payText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FF6B9D',
   },
-  
-  // 💡 TIP CARD
+
+  // Tip Card
   tipCard: {
-    marginHorizontal: SPACING.md,
-    borderColor: COLORS.primary,
-    borderWidth: 2,
-  },
-  tipContent: {
+    marginHorizontal: 20,
+    backgroundColor: '#FFF',
+    padding: 20,
+    borderRadius: 16,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    gap: 16,
+    shadowColor: '#1A1A2E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   tipIcon: {
     fontSize: 32,
-    marginRight: SPACING.sm,
   },
-  tipTextContainer: {
+  tipContent: {
     flex: 1,
   },
   tipTitle: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.textPrimary,
+    fontSize: 15,
     fontWeight: '700',
+    color: '#1A1A2E',
     marginBottom: 4,
   },
   tipText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textSecondary,
+    fontSize: 13,
+    color: '#64748B',
     lineHeight: 20,
   },
 });

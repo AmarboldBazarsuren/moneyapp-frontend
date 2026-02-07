@@ -4,544 +4,551 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  RefreshControl,
   TouchableOpacity,
+  RefreshControl,
   Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import Card from '../../components/ui/Card';
-import Button from '../../components/ui/Button';
 import { useLoans } from '../../hooks/useLoans';
-import { COLORS, GRADIENTS, SHADOWS, RADIUS, SPACING } from '../../styles/colors';
-import { TEXT_STYLES } from '../../styles/typography';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 
 const LoansScreen = () => {
   const router = useRouter();
-  const {
-    activeLoans,
-    completedLoans,
-    isLoading,
-    loadActiveLoans,
-    loadCompletedLoans,
-  } = useLoans();
-
-  const [selectedTab, setSelectedTab] = useState('active'); // active, completed
-  const [fadeAnim] = useState(new Animated.Value(0));
+  const { activeLoans, completedLoans, loadActiveLoans, loadCompletedLoans, isLoading } = useLoans();
+  
+  const [activeTab, setActiveTab] = useState('active'); // 'active' | 'completed'
+  const [slideAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
     loadData();
   }, []);
 
-  useEffect(() => {
-    // Fade in animation when tab changes
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
-  }, [selectedTab]);
-
   const loadData = async () => {
-    fadeAnim.setValue(0);
     await Promise.all([loadActiveLoans(), loadCompletedLoans()]);
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300,
+  };
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    Animated.spring(slideAnim, {
+      toValue: tab === 'active' ? 0 : 1,
       useNativeDriver: true,
     }).start();
   };
 
-  const handleRefresh = async () => {
-    await loadData();
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active':
+        return { bg: '#FFF5F7', text: '#FF6B9D', label: 'Идэвхтэй' };
+      case 'repaid':
+        return { bg: '#F0FDF4', text: '#6BCF7F', label: 'Төлөгдсөн' };
+      case 'overdue':
+        return { bg: '#FEF2F2', text: '#FF6B6B', label: 'Хугацаа хэтэрсэн' };
+      default:
+        return { bg: '#F5F7FA', text: '#64748B', label: status };
+    }
   };
 
-  const currentLoans = selectedTab === 'active' ? activeLoans : completedLoans;
-
-  const renderLoanCard = (loan, index) => {
-    const isActive = selectedTab === 'active';
-    const progress = isActive
-      ? ((loan.amount - loan.remainingAmount) / loan.amount) * 100
-      : 100;
-
-    const statusColor = loan.status === 'active' 
-      ? COLORS.success 
-      : loan.status === 'overdue'
-      ? COLORS.error
-      : COLORS.textSecondary;
-
-    const statusText = loan.status === 'active'
-      ? '✅ Идэвхтэй'
-      : loan.status === 'overdue'
-      ? '⚠️ Хугацаа хэтэрсэн'
-      : '✔️ Дууссан';
+  const renderLoanCard = (loan) => {
+    const status = getStatusColor(loan.status);
+    const isActive = loan.status === 'active';
 
     return (
       <TouchableOpacity
         key={loan._id}
-        style={styles.loanCardContainer}
-        onPress={() => router.push(`/loan-detail/${loan._id}`)}
-        activeOpacity={0.85}>
-        <LinearGradient
-          colors={
-            loan.status === 'active'
-              ? GRADIENTS.primary
-              : loan.status === 'overdue'
-              ? GRADIENTS.fire
-              : GRADIENTS.silver
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.loanCard, SHADOWS.medium]}>
-          
-          {/* HEADER */}
-          <View style={styles.loanHeader}>
-            <View style={styles.loanHeaderLeft}>
-              <Text style={styles.loanIcon}>💳</Text>
-              <View>
-                <Text style={styles.loanNumber}>{loan.loanNumber}</Text>
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusText}>{statusText}</Text>
-                </View>
+        style={styles.loanCard}
+        activeOpacity={0.8}
+        onPress={() => router.push(`/loan-detail/${loan._id}`)}>
+        
+        {/* Top Row */}
+        <View style={styles.loanHeader}>
+          <View style={styles.loanTop}>
+            <View style={[styles.iconCircle, { backgroundColor: status.bg }]}>
+              <Text style={styles.iconEmoji}>
+                {isActive ? '💰' : '✅'}
+              </Text>
+            </View>
+            <View style={styles.loanInfo}>
+              <Text style={styles.loanNumber}>{loan.loanNumber}</Text>
+              <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+                <Text style={[styles.statusText, { color: status.text }]}>
+                  {status.label}
+                </Text>
               </View>
             </View>
-            
-            <TouchableOpacity
-              style={styles.detailButton}
-              onPress={() => router.push(`/loan-detail/${loan._id}`)}>
-              <Text style={styles.detailIcon}>→</Text>
-            </TouchableOpacity>
           </View>
+          
+          <Text style={styles.arrow}>→</Text>
+        </View>
 
-          {/* AMOUNTS */}
-          <View style={styles.amountsSection}>
-            <View style={styles.amountRow}>
-              <Text style={styles.amountLabel}>Зээлийн дүн</Text>
-              <Text style={styles.amountValue}>
-                {formatCurrency(loan.amount)}
-              </Text>
-            </View>
-            
-            {isActive && (
-              <>
-                <View style={styles.amountRow}>
-                  <Text style={styles.amountLabel}>Үлдэгдэл</Text>
-                  <Text style={[styles.amountValue, styles.remainingAmount]}>
-                    {formatCurrency(loan.remainingAmount)}
-                  </Text>
+        {/* Amount Section */}
+        <View style={styles.amountSection}>
+          <View style={styles.amountRow}>
+            <Text style={styles.amountLabel}>Зээлийн дүн</Text>
+            <Text style={styles.amountValue}>
+              {formatCurrency(loan.amount)}
+            </Text>
+          </View>
+          
+          {isActive && (
+            <>
+              <View style={styles.amountRow}>
+                <Text style={styles.amountLabel}>Үлдэгдэл</Text>
+                <Text style={[styles.amountValue, { color: '#FF6B9D' }]}>
+                  {formatCurrency(loan.remainingAmount)}
+                </Text>
+              </View>
+              
+              {/* Progress Bar */}
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBar}>
+                  <LinearGradient
+                    colors={['#FF6B9D', '#C44569']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[
+                      styles.progressFill,
+                      {
+                        width: `${((loan.amount - loan.remainingAmount) / loan.amount) * 100}%`,
+                      },
+                    ]}
+                  />
                 </View>
-                
-                {/* PROGRESS BAR */}
-                <View style={styles.progressContainer}>
-                  <View style={styles.progressBar}>
-                    <View 
-                      style={[
-                        styles.progressFill,
-                        { width: `${progress}%` }
-                      ]} 
-                    />
-                  </View>
-                  <Text style={styles.progressText}>{progress.toFixed(0)}%</Text>
-                </View>
-              </>
-            )}
-          </View>
-
-          {/* DATES */}
-          <View style={styles.datesSection}>
-            <View style={styles.dateItem}>
-              <Text style={styles.dateLabel}>Эхлэх огноо</Text>
-              <Text style={styles.dateValue}>
-                {formatDate(loan.startDate)}
-              </Text>
-            </View>
-            <View style={styles.dateDivider} />
-            <View style={styles.dateItem}>
-              <Text style={styles.dateLabel}>Дуусах огноо</Text>
-              <Text style={styles.dateValue}>
-                {formatDate(loan.dueDate)}
-              </Text>
-            </View>
-          </View>
-
-          {/* ACTION BUTTON */}
-          {isActive && loan.status === 'active' && (
-            <TouchableOpacity
-              style={styles.payButton}
-              onPress={() => router.push(`/loan-detail/${loan._id}`)}>
-              <Text style={styles.payButtonText}>Төлөлт хийх</Text>
-            </TouchableOpacity>
+                <Text style={styles.progressPercent}>
+                  {Math.round(((loan.amount - loan.remainingAmount) / loan.amount) * 100)}%
+                </Text>
+              </View>
+            </>
           )}
-        </LinearGradient>
+        </View>
+
+        {/* Dates */}
+        <View style={styles.dateRow}>
+          <View style={styles.dateItem}>
+            <Text style={styles.dateLabel}>Огноо</Text>
+            <Text style={styles.dateValue}>{formatDate(loan.createdAt)}</Text>
+          </View>
+          {loan.dueDate && (
+            <View style={styles.dateItem}>
+              <Text style={styles.dateLabel}>Хугацаа</Text>
+              <Text style={styles.dateValue}>{formatDate(loan.dueDate)}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Action Button */}
+        {isActive && (
+          <TouchableOpacity
+            style={styles.payButton}
+            onPress={() => router.push(`/loan-detail/${loan._id}`)}>
+            <LinearGradient
+              colors={['#FF6B9D', '#C44569']}
+              style={styles.payButtonGrad}>
+              <Text style={styles.payButtonText}>Төлөх</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
     );
   };
 
-  const renderEmptyState = () => (
-    <Card padding="large">
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>
-          {selectedTab === 'active' ? '💰' : '✅'}
-        </Text>
-        <Text style={styles.emptyTitle}>
-          {selectedTab === 'active' 
-            ? 'Идэвхтэй зээл байхгүй байна'
-            : 'Төлөгдсөн зээл байхгүй байна'}
-        </Text>
-        <Text style={styles.emptyText}>
-          {selectedTab === 'active'
-            ? 'Зээл авахын тулд доорх товчийг дарна уу'
-            : 'Таны төлөгдсөн зээлийн түүх энд харагдана'}
-        </Text>
-        {selectedTab === 'active' && (
-          <Button
-            title="Зээл авах"
-            variant="gradient"
-            onPress={() => router.push('/loan-request')}
-            style={styles.emptyButton}
-          />
-        )}
-      </View>
-    </Card>
-  );
+  const displayLoans = activeTab === 'active' ? activeLoans : completedLoans;
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Миний зээлүүд</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('/loan-request')}>
-          <LinearGradient
-            colors={GRADIENTS.primary}
-            style={styles.addButtonGradient}>
-            <Text style={styles.addButtonIcon}>+</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#F5F7FA', '#ECF0F3']}
+        style={StyleSheet.absoluteFill}
+      />
 
-      {/* TAB NAVIGATION */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'active' && styles.tabActive]}
-          onPress={() => setSelectedTab('active')}>
-          <LinearGradient
-            colors={
-              selectedTab === 'active' 
-                ? GRADIENTS.primary 
-                : [COLORS.transparent, COLORS.transparent]
-            }
-            style={styles.tabGradient}>
-            <Text
+      <SafeAreaView style={styles.safe}>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Миний зээлүүд</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push('/loan-request')}>
+            <LinearGradient
+              colors={['#FFD93D', '#FF8C42']}
+              style={styles.addButtonGrad}>
+              <Text style={styles.addButtonText}>+ Зээл авах</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        {/* TABS */}
+        <View style={styles.tabs}>
+          <View style={styles.tabsContainer}>
+            <TouchableOpacity
               style={[
-                styles.tabText,
-                selectedTab === 'active' && styles.tabTextActive,
-              ]}>
-              Идэвхтэй ({activeLoans?.length || 0})
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
+                styles.tab,
+                activeTab === 'active' && styles.tabActive,
+              ]}
+              onPress={() => handleTabChange('active')}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === 'active' && styles.tabTextActive,
+                ]}>
+                ⚡ Идэвхтэй
+              </Text>
+              {activeLoans?.length > 0 && (
+                <View style={styles.tabBadge}>
+                  <Text style={styles.tabBadgeText}>{activeLoans.length}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'completed' && styles.tabActive]}
-          onPress={() => setSelectedTab('completed')}>
-          <LinearGradient
-            colors={
-              selectedTab === 'completed'
-                ? GRADIENTS.primary
-                : [COLORS.transparent, COLORS.transparent]
-            }
-            style={styles.tabGradient}>
-            <Text
+            <TouchableOpacity
               style={[
-                styles.tabText,
-                selectedTab === 'completed' && styles.tabTextActive,
-              ]}>
-              Төлөгдсөн ({completedLoans?.length || 0})
-            </Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
+                styles.tab,
+                activeTab === 'completed' && styles.tabActive,
+              ]}
+              onPress={() => handleTabChange('completed')}>
+              <Text
+                style={[
+                  styles.tabText,
+                  activeTab === 'completed' && styles.tabTextActive,
+                ]}>
+                ✅ Төлөгдсөн
+              </Text>
+              {completedLoans?.length > 0 && (
+                <View style={[styles.tabBadge, { backgroundColor: '#E8F5E9' }]}>
+                  <Text style={[styles.tabBadgeText, { color: '#6BCF7F' }]}>
+                    {completedLoans.length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
 
-      {/* LOANS LIST */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={handleRefresh}
-            colors={[COLORS.primary]}
-            tintColor={COLORS.primary}
+          {/* Sliding Indicator */}
+          <Animated.View
+            style={[
+              styles.indicator,
+              {
+                transform: [
+                  {
+                    translateX: slideAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 170],
+                    }),
+                  },
+                ],
+              },
+            ]}
           />
-        }
-        showsVerticalScrollIndicator={false}>
-        
-        <Animated.View style={{ opacity: fadeAnim }}>
-          {currentLoans && currentLoans.length > 0 ? (
-            currentLoans.map((loan, index) => renderLoanCard(loan, index))
-          ) : (
-            renderEmptyState()
-          )}
-        </Animated.View>
+        </View>
 
-        {/* Bottom spacing */}
-        <View style={{ height: SPACING.xl }} />
-      </ScrollView>
-    </SafeAreaView>
+        {/* CONTENT */}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={loadData}
+              tintColor="#FF6B9D"
+            />
+          }
+          showsVerticalScrollIndicator={false}>
+          
+          {displayLoans && displayLoans.length > 0 ? (
+            displayLoans.map(renderLoanCard)
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>
+                {activeTab === 'active' ? '💰' : '✅'}
+              </Text>
+              <Text style={styles.emptyTitle}>
+                {activeTab === 'active'
+                  ? 'Идэвхтэй зээл байхгүй'
+                  : 'Төлөгдсөн зээл байхгүй'}
+              </Text>
+              <Text style={styles.emptyText}>
+                {activeTab === 'active'
+                  ? 'Шинэ зээл авахын тулд дээрх товчийг дарна уу'
+                  : 'Та хараахан зээлээ төлөөгүй байна'}
+              </Text>
+            </View>
+          )}
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
-  
-  // HEADER
+  safe: {
+    flex: 1,
+  },
+
+  // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 16,
   },
-  headerTitle: {
-    ...TEXT_STYLES.h2,
-    color: COLORS.textPrimary,
-    fontWeight: '700',
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#1A1A2E',
   },
   addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    borderRadius: 12,
     overflow: 'hidden',
-    ...SHADOWS.small,
+    shadowColor: '#FFD93D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  addButtonGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  addButtonGrad: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
-  addButtonIcon: {
-    ...TEXT_STYLES.h3,
-    color: COLORS.textWhite,
-    fontWeight: '300',
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFF',
   },
-  
-  // TABS
-  tabContainer: {
+
+  // Tabs
+  tabs: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  tabsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
-    gap: SPACING.sm,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 4,
+    shadowColor: '#1A1A2E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   tab: {
     flex: 1,
-    overflow: 'hidden',
-    borderRadius: RADIUS.md,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 6,
   },
   tabActive: {
-    ...SHADOWS.small,
-  },
-  tabGradient: {
-    paddingVertical: SPACING.sm,
-    alignItems: 'center',
+    backgroundColor: '#FFF5F7',
   },
   tabText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textSecondary,
+    fontSize: 14,
     fontWeight: '600',
+    color: '#64748B',
   },
   tabTextActive: {
-    color: COLORS.textWhite,
+    color: '#FF6B9D',
+    fontWeight: '700',
   },
-  
-  // SCROLL VIEW
+  tabBadge: {
+    backgroundColor: '#FFF5F7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  tabBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FF6B9D',
+  },
+  indicator: {
+    position: 'absolute',
+    bottom: 4,
+    left: 24,
+    width: 160,
+    height: 44,
+    backgroundColor: '#FFF5F7',
+    borderRadius: 8,
+  },
+
+  // Scroll View
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: 20,
   },
-  
-  // LOAN CARD
-  loanCardContainer: {
-    marginBottom: SPACING.md,
-  },
+
+  // Loan Card
   loanCard: {
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    overflow: 'hidden',
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#1A1A2E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   loanHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: 16,
   },
-  loanHeaderLeft: {
+  loanTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    gap: 12,
   },
-  loanIcon: {
-    fontSize: 40,
-    marginRight: SPACING.sm,
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  iconEmoji: {
+    fontSize: 24,
+  },
+  loanInfo: {
+    gap: 6,
   },
   loanNumber: {
-    ...TEXT_STYLES.h5,
-    color: COLORS.textWhite,
+    fontSize: 15,
     fontWeight: '700',
-    marginBottom: 4,
+    color: '#1A1A2E',
   },
   statusBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 2,
-    borderRadius: RADIUS.xs,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
     alignSelf: 'flex-start',
   },
   statusText: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textWhite,
+    fontSize: 12,
     fontWeight: '600',
   },
-  detailButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  arrow: {
+    fontSize: 20,
+    color: '#CBD5E1',
   },
-  detailIcon: {
-    ...TEXT_STYLES.h5,
-    color: COLORS.textWhite,
-    fontWeight: '300',
-  },
-  
-  // AMOUNTS
-  amountsSection: {
-    marginBottom: SPACING.md,
+
+  // Amount Section
+  amountSection: {
+    gap: 12,
+    marginBottom: 16,
   },
   amountRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: SPACING.xs,
+    alignItems: 'center',
   },
   amountLabel: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
-    opacity: 0.8,
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
   },
   amountValue: {
-    ...TEXT_STYLES.h5,
-    color: COLORS.textWhite,
+    fontSize: 16,
     fontWeight: '700',
+    color: '#1A1A2E',
   },
-  remainingAmount: {
-    fontSize: 24,
-  },
-  
-  // PROGRESS
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: SPACING.sm,
-    gap: SPACING.sm,
+    gap: 12,
   },
   progressBar: {
     flex: 1,
     height: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#F1F5F9',
     borderRadius: 4,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: COLORS.textWhite,
     borderRadius: 4,
   },
-  progressText: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textWhite,
+  progressPercent: {
+    fontSize: 13,
     fontWeight: '700',
+    color: '#FF6B9D',
     minWidth: 40,
     textAlign: 'right',
   },
-  
-  // DATES
-  datesSection: {
+
+  // Dates
+  dateRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: RADIUS.md,
-    padding: SPACING.sm,
-    marginBottom: SPACING.md,
+    gap: 20,
+    marginBottom: 16,
   },
   dateItem: {
     flex: 1,
-    alignItems: 'center',
-  },
-  dateDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   dateLabel: {
-    ...TEXT_STYLES.caption,
-    color: COLORS.textWhite,
-    opacity: 0.7,
+    fontSize: 12,
+    color: '#94A3B8',
     marginBottom: 4,
   },
   dateValue: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textWhite,
+    fontSize: 13,
     fontWeight: '600',
+    color: '#1A1A2E',
   },
-  
-  // PAY BUTTON
+
+  // Pay Button
   payButton: {
-    backgroundColor: COLORS.textWhite,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.md,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#FF6B9D',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  payButtonGrad: {
+    paddingVertical: 14,
     alignItems: 'center',
   },
   payButtonText: {
-    ...TEXT_STYLES.bodyLarge,
-    color: COLORS.primary,
+    fontSize: 15,
     fontWeight: '700',
+    color: '#FFF',
   },
-  
-  // EMPTY STATE
-  emptyContainer: {
+
+  // Empty State
+  emptyState: {
     alignItems: 'center',
-    paddingVertical: SPACING.xl,
+    justifyContent: 'center',
+    paddingVertical: 80,
   },
   emptyIcon: {
     fontSize: 64,
-    marginBottom: SPACING.md,
+    marginBottom: 16,
   },
   emptyTitle: {
-    ...TEXT_STYLES.h5,
-    color: COLORS.textPrimary,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: SPACING.xs,
-    textAlign: 'center',
+    color: '#1A1A2E',
+    marginBottom: 8,
   },
   emptyText: {
-    ...TEXT_STYLES.body,
-    color: COLORS.textSecondary,
+    fontSize: 14,
+    color: '#64748B',
     textAlign: 'center',
-    marginBottom: SPACING.lg,
-    paddingHorizontal: SPACING.lg,
-  },
-  emptyButton: {
-    minWidth: 200,
+    lineHeight: 20,
   },
 });
 

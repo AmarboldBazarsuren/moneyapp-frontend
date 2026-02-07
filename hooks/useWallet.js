@@ -3,7 +3,7 @@ import walletService from '../services/walletService';
 import { useAuth } from './useAuth';
 
 export const useWallet = () => {
-  const { wallet, updateWallet, isAuthenticated } = useAuth();
+  const { wallet, updateWallet, isAuthenticated, refreshUser } = useAuth(); // ✅ refreshUser нэмэх
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -72,15 +72,16 @@ export const useWallet = () => {
     await loadTransactions(1, true);
   }, [refreshWallet, loadTransactions]);
 
-  // Хэтэвч баталгаажуулах
-  const verifyWallet = useCallback(async () => {
+  // ✅ ШИНЭ: E-Mongolia баталгаажуулах
+  const verifyEmongola = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const response = await walletService.verifyWallet();
+      const response = await walletService.verifyEmongola();
       
       if (response.success) {
+        await refreshUser(); // User болон wallet мэдээлэл шинэчлэх
         await refreshWallet();
       }
       
@@ -91,14 +92,14 @@ export const useWallet = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [refreshWallet]);
+  }, [refreshUser, refreshWallet]);
 
   // Анхны ачаалал
   useEffect(() => {
     if (isAuthenticated) {
       loadTransactions(1, true);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, loadTransactions]);
 
   return {
     wallet,
@@ -110,7 +111,7 @@ export const useWallet = () => {
     loadTransactions,
     loadMore,
     refresh,
-    verifyWallet,
+    verifyEmongola, 
   };
 };
 
