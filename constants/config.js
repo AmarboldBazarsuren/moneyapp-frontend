@@ -1,8 +1,32 @@
+import Constants from 'expo-constants';
+
+const ENV = {
+  dev: {
+    apiUrl: 'http://localhost:5000/api',
+  },
+  staging: {
+    apiUrl: 'https://staging-api.moneyapp.mn/api',
+  },
+  prod: {
+    apiUrl: 'https://api.moneyapp.mn/api',
+  },
+};
+
+const getEnvVars = () => {
+  if (__DEV__) {
+    return ENV.dev;
+  } else if (Constants.expoConfig?.extra?.environment === 'staging') {
+    return ENV.staging;
+  } else {
+    return ENV.prod;
+  }
+};
+
+const environment = getEnvVars();
+
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: __DEV__ 
-    ? 'http://localhost:5000/api'  // Development
-    : 'https://your-production-api.com/api',  // Production
+  BASE_URL: environment.apiUrl,
   TIMEOUT: 30000,
 };
 
@@ -39,5 +63,4 @@ export const SCREENS = {
   // Loan Screens
   LOAN_REQUEST: 'loan-request',
   LOAN_DETAIL: 'loan-detail',
-  LOAN_REPAY: 'loan-repay',
 };
